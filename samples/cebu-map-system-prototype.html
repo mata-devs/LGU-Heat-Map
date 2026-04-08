@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cebu Map System Prototype</title>
+  <link rel="preconnect" href="https://api.fontshare.com">
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    :root, [data-theme="light"] {
+      --font-body: 'General Sans', Inter, sans-serif;
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2rem);
+      --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem;
+      --color-bg: #f7f6f2;
+      --color-surface: rgba(249,248,245,.84);
+      --color-surface-solid: #f9f8f5;
+      --color-surface-2: rgba(255,255,255,.76);
+      --color-surface-offset: #f1eeea;
+      --color-border: rgba(40,37,29,.12);
+      --color-text: #28251d;
+      --color-text-muted: #6f6d68;
+      --color-primary: #01696f;
+      --color-primary-2: #0f4f54;
+      --color-primary-soft: rgba(1,105,111,.12);
+      --shadow-md: 0 12px 30px rgba(20,20,20,.10);
+      --radius-md: .9rem;
+      --radius-lg: 1.2rem;
+      --radius-full: 9999px;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614;
+      --color-surface: rgba(28,27,25,.84);
+      --color-surface-solid: #1c1b19;
+      --color-surface-2: rgba(36,35,32,.78);
+      --color-surface-offset: #242320;
+      --color-border: rgba(255,255,255,.10);
+      --color-text: #d8d6d1;
+      --color-text-muted: #a4a19c;
+      --color-primary: #4f98a3;
+      --color-primary-2: #77b1b5;
+      --color-primary-soft: rgba(79,152,163,.16);
+      --shadow-md: 0 16px 40px rgba(0,0,0,.30);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: var(--font-body, sans-serif);
+      background: var(--color-bg);
+      color: var(--color-text);
+      overflow: hidden;
+    }
+    button, select { font: inherit; }
+    .app, .view, #leaflet-map { width: 100vw; height: 100vh; }
+    .leaflet-shell { position: relative; }
+    #leaflet-map { background: var(--color-surface-offset); }
+    .leaflet-container { background: var(--color-surface-offset); }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: var(--color-surface-solid);
+      color: var(--color-text);
+      box-shadow: var(--shadow-md);
+    }
+    .overlay {
+      position: fixed;
+      z-index: 1000;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .topbar {
+      top: 16px; left: 16px; right: 16px;
+      min-height: 68px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--space-4); padding: 12px 14px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center;
+      background: linear-gradient(145deg, var(--color-primary-soft), var(--color-surface-2));
+      color: var(--color-primary); border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+      flex: 0 0 auto;
+    }
+    .brand-copy h1 { margin: 0; font-size: var(--text-lg); line-height: 1.05; }
+    .brand-copy p { margin: 2px 0 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+    .top-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn, .control {
+      min-height: 42px; border-radius: var(--radius-full); border: 1px solid var(--color-border);
+      background: var(--color-surface-2); color: var(--color-text); padding: 0 14px;
+    }
+    .btn.primary { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+    .hover-chip {
+      position: fixed; z-index: 1100; top: 96px; right: 16px; min-width: 240px; max-width: min(360px, calc(100vw - 32px));
+      padding: 12px 14px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+    }
+    .hover-chip .value { margin-top: 4px; font-size: 1.15rem; font-weight: 700; }
+    .left-panel {
+      top: 100px; left: 16px; width: min(360px, calc(100vw - 32px)); padding: 16px; display: grid; gap: 14px;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .panel-section {
+      background: color-mix(in srgb, var(--color-surface-solid) 68%, transparent);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 14px;
+    }
+    .eyebrow {
+      font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 8px;
+    }
+    .panel-section h2, .panel-section h3, .kepler-card h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .panel-section p, .kepler-card p { margin: 0; color: var(--color-text-muted); font-size: .96rem; line-height: 1.45; }
+    .dataset-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+    .dataset-card {
+      padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface-2);
+    }
+    .dataset-card .label { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .08em; }
+    .dataset-card .value { margin-top: 4px; font-size: 1.15rem; font-weight: 700; }
+    .floating-bottom {
+      position: fixed; z-index: 1000; left: 16px; right: 16px; bottom: 16px; display: grid;
+      grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 16px; pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .floating-bottom > * { pointer-events: auto; }
+    .legend-panel, .selected-panel, .kepler-card {
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px;
+    }
+    .legend-list { display: grid; gap: 8px; margin-top: 10px; }
+    .legend-row {
+      display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--color-text-muted);
+    }
+    .swatch { width: 14px; height: 14px; border-radius: 999px; border: 1px solid rgba(0,0,0,.08); }
+    .selected-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .selected-title h3 { margin: 0; font-size: 1.05rem; }
+    .statline {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px;
+      background: var(--color-primary-soft); color: var(--color-primary); font-size: var(--text-sm); font-weight: 600;
+    }
+    .help, .muted { margin-top: 10px; font-size: var(--text-sm); color: var(--color-text-muted); }
+    .overlays-hidden .left-panel, .overlays-hidden .floating-bottom { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    .kepler-shell {
+      width: 100vw; height: 100vh; padding: 96px 16px 16px; background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 34%),
+      linear-gradient(180deg, color-mix(in srgb, var(--color-surface-solid) 70%, var(--color-bg)), var(--color-bg));
+      overflow: auto;
+    }
+    .kepler-grid {
+      display: grid; grid-template-columns: minmax(320px, 380px) minmax(0, 1fr); gap: 16px; height: calc(100vh - 112px);
+    }
+    .kepler-stack { display: grid; gap: 16px; align-content: start; }
+    .kepler-stage {
+      border-radius: 24px; border: 1px solid var(--color-border); background: linear-gradient(180deg, var(--color-surface), color-mix(in srgb, var(--color-surface-solid) 88%, transparent));
+      box-shadow: var(--shadow-md); min-height: 560px; display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
+    }
+    .kepler-stage-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--color-border);
+    }
+    .pill-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      padding: 7px 12px; border-radius: 999px; background: var(--color-primary-soft); color: var(--color-primary); font-size: var(--text-sm); font-weight: 600;
+    }
+    .kepler-canvas {
+      position: relative; background:
+      linear-gradient(180deg, rgba(0,0,0,.02), rgba(0,0,0,.00)),
+      repeating-linear-gradient(0deg, transparent 0 47px, rgba(0,0,0,.04) 47px 48px),
+      repeating-linear-gradient(90deg, transparent 0 47px, rgba(0,0,0,.04) 47px 48px),
+      linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-offset)), var(--color-surface-solid));
+      min-height: 100%;
+      overflow: hidden;
+    }
+    .hex {
+      position: absolute; width: 72px; height: 78px; clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
+      border: 1px solid rgba(255,255,255,.16);
+      display: grid; place-items: center; color: white; font-size: .78rem; font-weight: 700;
+    }
+    .building {
+      position: absolute; bottom: 0; width: 24px; border-radius: 10px 10px 0 0;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary-2) 72%, white), color-mix(in srgb, var(--color-primary) 88%, black));
+      opacity: .9;
+    }
+    .heat-blur {
+      position: absolute; inset: auto; width: 180px; height: 180px; border-radius: 999px;
+      background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 44%, transparent), transparent 66%);
+      filter: blur(6px); opacity: .55;
+    }
+    .kepler-footer {
+      padding: 14px 18px; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .mini-list { display: grid; gap: 10px; margin-top: 12px; }
+    .mini-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px;
+      border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface-2);
+    }
+    .mini-item strong { display: block; }
+    .mini-item span { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .nav-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .topbar { left: 12px; right: 12px; top: 12px; flex-direction: column; align-items: stretch; }
+      .left-panel { top: 126px; left: 12px; right: 12px; width: auto; }
+      .hover-chip { top: auto; bottom: 12px; right: 12px; left: 12px; max-width: none; }
+      .floating-bottom { left: 12px; right: 12px; bottom: 78px; grid-template-columns: 1fr; }
+      .kepler-shell { padding: 126px 12px 12px; }
+      .kepler-grid { grid-template-columns: 1fr; height: auto; }
+      .kepler-stage { min-height: 520px; }
+    }
+    @media (max-width: 640px) {
+      .dataset-grid { grid-template-columns: 1fr 1fr; }
+      .top-actions { width: 100%; }
+      .top-actions > * { flex: 1 1 auto; }
+      .brand-copy h1 { font-size: 1.1rem; }
+      .brand-copy p { font-size: .9rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" x-data="mapSystemApp()" x-init="init()">
+    <header class="overlay topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 6.5 11.5 3l6.5 3.7v7.2L11.5 21 6 17.6z"></path>
+            <path d="M11.5 3v18"></path>
+            <path d="M6 6.5 18 14"></path>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <h1>Cebu Map System Prototype</h1>
+          <p x-text="currentPage === 'leaflet' ? 'Leaflet production map page' : 'Kepler-style analysis page'"></p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="nav-row">
+          <button class="btn" :class="currentPage === 'leaflet' ? 'primary' : ''" @click="switchPage('leaflet')">Leaflet page</button>
+          <button class="btn" :class="currentPage === 'kepler' ? 'primary' : ''" @click="switchPage('kepler')">Kepler page</button>
+        </div>
+        <template x-if="currentPage === 'leaflet'">
+          <select class="control" x-model="datasetMode" @change="regenerateData()" aria-label="Select dataset">
+            <option value="random">Random values</option>
+            <option value="tourism">Tourist arrivals</option>
+            <option value="fuel">Fuel allocation</option>
+            <option value="voters">Voting population</option>
+          </select>
+        </template>
+        <button class="btn" x-show="currentPage === 'leaflet'" @click="togglePanels()" x-text="showPanels ? 'Hide panels' : 'Show panels'"></button>
+        <button class="btn" @click="toggleTheme()">Theme</button>
+        <button class="btn primary" x-show="currentPage === 'leaflet'" @click="regenerateData()">Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="view leaflet-shell" x-show="currentPage === 'leaflet'" :class="showPanels ? '' : 'overlays-hidden'">
+        <div id="leaflet-map" aria-label="Interactive Cebu choropleth map"></div>
+
+        <section class="hover-chip">
+          <div class="eyebrow">Hover status</div>
+          <strong x-text="selected.name || 'Move cursor over an LGU'"></strong>
+          <div class="value" x-text="selected.name ? formatNumber(selected.value) : '—'"></div>
+          <div class="help" x-text="selected.name ? selected.message : 'All larger dashboard panels can be hidden while this compact hover card stays visible.'"></div>
+        </section>
+
+        <aside class="overlay left-panel">
+          <section class="panel-section">
+            <div class="eyebrow">Leaflet role</div>
+            <h2>Production choropleth page</h2>
+            <p>Fast, custom, map-first UI for the final Cebu LGU experience. This is the page you can embed, present, or use as the clean operational map.</p>
+          </section>
+          <section class="panel-section">
+            <div class="eyebrow">Quick stats</div>
+            <div class="dataset-grid">
+              <div class="dataset-card"><div class="label">LGUs</div><div class="value" x-text="stats.total"></div></div>
+              <div class="dataset-card"><div class="label">Max</div><div class="value" x-text="formatNumber(stats.max)"></div></div>
+              <div class="dataset-card"><div class="label">Min</div><div class="value" x-text="formatNumber(stats.min)"></div></div>
+              <div class="dataset-card"><div class="label">Average</div><div class="value" x-text="formatNumber(stats.avg)"></div></div>
+            </div>
+          </section>
+          <section class="panel-section">
+            <div class="eyebrow">System state</div>
+            <div class="statline"><span>●</span><span x-text="statusText"></span></div>
+            <div class="help">Later this can show Google Sheets sync health, last pull time, or active data range.</div>
+          </section>
+        </aside>
+
+        <section class="floating-bottom">
+          <div class="legend-panel">
+            <div class="eyebrow">Legend</div>
+            <strong>Color scale</strong>
+            <div class="legend-list">
+              <template x-for="item in legend" :key="item.range">
+                <div class="legend-row">
+                  <span class="swatch" :style="`background:${item.color}`"></span>
+                  <span x-text="item.label"></span>
+                  <span x-text="item.range"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="selected-panel">
+            <div class="selected-title">
+              <div>
+                <div class="eyebrow">Selected / hovered LGU</div>
+                <h3 x-text="selected.name || 'Hover or click an LGU'"></h3>
+              </div>
+              <div class="statline" x-show="selected.name"><span x-text="selected.name ? formatNumber(selected.value) : '—'"></span></div>
+            </div>
+            <p class="muted" x-text="selected.name ? selected.message : 'This area can later show LGU detail, trends, rank, or contextual notes without leaving the map.'"></p>
+            <div class="help">Updated <span x-text="lastUpdated"></span></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view kepler-shell" x-show="currentPage === 'kepler'">
+        <div class="kepler-grid">
+          <div class="kepler-stack">
+            <article class="kepler-card">
+              <div class="eyebrow">Kepler role</div>
+              <h2>Geoanalysis and exploratory map lab</h2>
+              <p>This page is where you test advanced spatial views like heatmaps, hexbin/H3 aggregation, hotspots, building density, and exploratory filtering before deciding what belongs in the production map.</p>
+              <div class="mini-list">
+                <div class="mini-item"><div><strong>Hex / H3 view</strong><span>Surface demand and density clusters</span></div><strong>Ready</strong></div>
+                <div class="mini-item"><div><strong>Heatmap mode</strong><span>Diffuse point intensity and hotspot reading</span></div><strong>Ready</strong></div>
+                <div class="mini-item"><div><strong>Building / 3D cues</strong><span>Useful later for urban density storytelling</span></div><strong>Concept</strong></div>
+              </div>
+            </article>
+            <article class="kepler-card">
+              <div class="eyebrow">Why separate page</div>
+              <p>Leaflet stays polished and simple, while this page stays powerful and experimental. Both can share the same data pipeline without forcing one UI to carry every responsibility.</p>
+            </article>
+          </div>
+
+          <section class="kepler-stage">
+            <div class="kepler-stage-header">
+              <div>
+                <div class="eyebrow">Analysis canvas</div>
+                <h2>Kepler-style visualization environment</h2>
+              </div>
+              <div class="pill-row">
+                <span class="pill">Hexbin</span>
+                <span class="pill">Heatmap</span>
+                <span class="pill">Buildings</span>
+                <span class="pill">Filters</span>
+              </div>
+            </div>
+            <div class="kepler-canvas">
+              <div class="heat-blur" style="left:8%; top:18%;"></div>
+              <div class="heat-blur" style="left:36%; top:24%; width:220px; height:220px;"></div>
+              <div class="heat-blur" style="left:62%; top:16%; width:160px; height:160px;"></div>
+              <div class="heat-blur" style="left:72%; top:40%; width:210px; height:210px;"></div>
+              <div class="heat-blur" style="left:20%; top:54%; width:180px; height:180px;"></div>
+
+              <div class="hex" style="left:10%; top:18%; background:#0f4f54;">92</div>
+              <div class="hex" style="left:18%; top:24%; background:#1f6e74;">88</div>
+              <div class="hex" style="left:26%; top:18%; background:#3f8b90;">76</div>
+              <div class="hex" style="left:34%; top:24%; background:#77b1b5;">61</div>
+              <div class="hex" style="left:42%; top:18%; background:#0f4f54;">95</div>
+              <div class="hex" style="left:50%; top:24%; background:#1f6e74;">84</div>
+              <div class="hex" style="left:58%; top:18%; background:#3f8b90;">69</div>
+              <div class="hex" style="left:66%; top:24%; background:#77b1b5;">58</div>
+              <div class="hex" style="left:74%; top:18%; background:#acd0d1; color:#14383b;">42</div>
+
+              <div class="hex" style="left:14%; top:42%; background:#3f8b90;">71</div>
+              <div class="hex" style="left:22%; top:48%; background:#1f6e74;">83</div>
+              <div class="hex" style="left:30%; top:42%; background:#0f4f54;">91</div>
+              <div class="hex" style="left:38%; top:48%; background:#77b1b5;">63</div>
+              <div class="hex" style="left:46%; top:42%; background:#3f8b90;">74</div>
+              <div class="hex" style="left:54%; top:48%; background:#1f6e74;">87</div>
+              <div class="hex" style="left:62%; top:42%; background:#77b1b5;">59</div>
+              <div class="hex" style="left:70%; top:48%; background:#acd0d1; color:#14383b;">39</div>
+
+              <div class="building" style="left:12%; height:90px;"></div>
+              <div class="building" style="left:15%; height:130px;"></div>
+              <div class="building" style="left:18%; height:110px;"></div>
+              <div class="building" style="left:48%; height:180px;"></div>
+              <div class="building" style="left:51%; height:145px;"></div>
+              <div class="building" style="left:54%; height:160px;"></div>
+              <div class="building" style="left:74%; height:120px;"></div>
+              <div class="building" style="left:77%; height:96px;"></div>
+            </div>
+            <div class="kepler-footer">
+              <span class="muted">Prototype concept: dedicated page for future Kepler integration</span>
+              <span class="statline">Same data pipeline, different visualization environment</span>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    function mapSystemApp() {
+      return {
+        currentPage: 'leaflet',
+        map: null,
+        geojsonLayer: null,
+        datasetMode: 'random',
+        showPanels: true,
+        lastUpdated: '—',
+        statusText: 'Prototype ready',
+        selected: { name: '', value: 0, message: '' },
+        stats: { total: 0, min: 0, max: 0, avg: 0 },
+        legend: [],
+        cebuGeojson: {
+          type: 'FeatureCollection',
+          features: [
+            { type: 'Feature', properties: { name: 'Bogo City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.88,11.12],[123.96,11.10],[123.98,11.17],[123.91,11.22],[123.86,11.18],[123.88,11.12]]] } },
+            { type: 'Feature', properties: { name: 'Daanbantayan', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.86,11.22],[123.94,11.21],[124.00,11.31],[123.93,11.38],[123.85,11.33],[123.86,11.22]]] } },
+            { type: 'Feature', properties: { name: 'Medellin', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.82,11.10],[123.88,11.12],[123.86,11.22],[123.79,11.23],[123.75,11.15],[123.82,11.10]]] } },
+            { type: 'Feature', properties: { name: 'Tuburan', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.65,10.80],[123.76,10.82],[123.79,10.96],[123.72,11.04],[123.61,10.96],[123.65,10.80]]] } },
+            { type: 'Feature', properties: { name: 'Balamban', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.60,10.50],[123.74,10.53],[123.76,10.70],[123.66,10.76],[123.56,10.66],[123.60,10.50]]] } },
+            { type: 'Feature', properties: { name: 'Toledo City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.58,10.34],[123.70,10.37],[123.71,10.50],[123.60,10.50],[123.52,10.41],[123.58,10.34]]] } },
+            { type: 'Feature', properties: { name: 'Cebu City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.86,10.25],[123.95,10.25],[123.96,10.34],[123.88,10.37],[123.84,10.31],[123.86,10.25]]] } },
+            { type: 'Feature', properties: { name: 'Mandaue City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.90,10.31],[123.95,10.31],[123.95,10.35],[123.90,10.35],[123.90,10.31]]] } },
+            { type: 'Feature', properties: { name: 'Lapu-Lapu City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.95,10.24],[124.03,10.25],[124.03,10.36],[123.98,10.39],[123.95,10.34],[123.95,10.24]]] } },
+            { type: 'Feature', properties: { name: 'Talisay City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.84,10.20],[123.91,10.20],[123.91,10.25],[123.86,10.25],[123.83,10.22],[123.84,10.20]]] } },
+            { type: 'Feature', properties: { name: 'Naga City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.75,10.15],[123.84,10.17],[123.84,10.23],[123.76,10.24],[123.73,10.18],[123.75,10.15]]] } },
+            { type: 'Feature', properties: { name: 'Carcar City', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.62,10.05],[123.76,10.07],[123.76,10.18],[123.66,10.21],[123.60,10.12],[123.62,10.05]]] } },
+            { type: 'Feature', properties: { name: 'Argao', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.55,9.86],[123.71,9.89],[123.72,10.03],[123.60,10.08],[123.51,9.98],[123.55,9.86]]] } },
+            { type: 'Feature', properties: { name: 'Dalaguete', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.47,9.73],[123.63,9.76],[123.64,9.90],[123.55,9.95],[123.46,9.84],[123.47,9.73]]] } },
+            { type: 'Feature', properties: { name: 'Oslob', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.42,9.55],[123.55,9.58],[123.56,9.71],[123.47,9.75],[123.40,9.65],[123.42,9.55]]] } },
+            { type: 'Feature', properties: { name: 'Bantayan', value: 0 }, geometry: { type: 'Polygon', coordinates: [[[123.70,11.03],[123.81,11.04],[123.82,11.16],[123.73,11.18],[123.68,11.11],[123.70,11.03]]] } }
+          ]
+        },
+        init() {
+          const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+          this.initMap();
+          this.regenerateData();
+          window.addEventListener('resize', () => {
+            if (this.map) this.map.invalidateSize();
+          });
+        },
+        switchPage(page) {
+          this.currentPage = page;
+          if (page === 'leaflet') {
+            setTimeout(() => {
+              this.map.invalidateSize();
+              this.map.fitBounds(this.geojsonLayer.getBounds(), { padding: [18, 18] });
+            }, 50);
+          }
+        },
+        toggleTheme() {
+          const root = document.documentElement;
+          root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        },
+        togglePanels() { this.showPanels = !this.showPanels; },
+        initMap() {
+          this.map = L.map('leaflet-map', { zoomControl: true, attributionControl: true });
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(this.map);
+          this.geojsonLayer = L.geoJSON(this.cebuGeojson, {
+            style: (feature) => this.styleFeature(feature),
+            onEachFeature: (feature, layer) => {
+              layer.on({
+                mouseover: (e) => this.highlightFeature(e),
+                mouseout: (e) => this.resetFeature(e),
+                click: (e) => this.zoomToFeature(e)
+              });
+              layer.bindPopup(this.popupContent(feature.properties));
+            }
+          }).addTo(this.map);
+          this.map.fitBounds(this.geojsonLayer.getBounds(), { padding: [18, 18] });
+        },
+        popupContent(properties) {
+          return `<div style="min-width:180px"><strong>${properties.name}</strong><br><span style="opacity:.8">Value: ${this.formatNumber(properties.value)}</span><br><span style="opacity:.7">Dataset: ${this.datasetMode}</span></div>`;
+        },
+        getDatasetConfig() {
+          const configs = {
+            random: { range: [50, 1200] },
+            tourism: { range: [800, 18000] },
+            fuel: { range: [100, 3500] },
+            voters: { range: [3000, 95000] }
+          };
+          return configs[this.datasetMode];
+        },
+        regenerateData() {
+          const config = this.getDatasetConfig();
+          const [min, max] = config.range;
+          this.cebuGeojson.features.forEach((feature, index) => {
+            feature.properties.value = this.generateValue(min, max, index);
+          });
+          const values = this.cebuGeojson.features.map(f => f.properties.value);
+          const total = values.length;
+          const minVal = Math.min(...values);
+          const maxVal = Math.max(...values);
+          const avgVal = Math.round(values.reduce((a,b) => a + b, 0) / total);
+          this.stats = { total, min: minVal, max: maxVal, avg: avgVal };
+          this.legend = this.buildLegend(minVal, maxVal);
+          this.lastUpdated = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          this.statusText = 'Map restyled from shared prototype dataset';
+          this.refreshLayer();
+        },
+        generateValue(min, max, index) {
+          const weight = Math.sin((Date.now() / 250000) + index) * 0.5 + 0.5;
+          const noise = Math.random() * 0.45 + 0.55;
+          return Math.round(min + (max - min) * weight * noise);
+        },
+        styleFeature(feature) {
+          return { fillColor: this.getColor(feature.properties.value), weight: 1.2, opacity: 1, color: 'rgba(60,60,60,.45)', fillOpacity: 0.8 };
+        },
+        getColor(value) {
+          const { min, max } = this.stats;
+          if (!max || max === min) return '#dfe7e5';
+          const t = (value - min) / (max - min);
+          if (t > .85) return '#0f4f54';
+          if (t > .68) return '#1f6e74';
+          if (t > .5) return '#3f8b90';
+          if (t > .32) return '#77b1b5';
+          if (t > .15) return '#acd0d1';
+          return '#d7ebea';
+        },
+        buildLegend(min, max) {
+          const steps = 6, size = (max - min) / steps, items = [];
+          for (let i = 0; i < steps; i++) {
+            const start = Math.round(min + size * i);
+            const end = Math.round(i === steps - 1 ? max : min + size * (i + 1));
+            const midpoint = Math.round((start + end) / 2);
+            items.push({ color: this.getColor(midpoint), label: i === 0 ? 'Lowest' : i === steps - 1 ? 'Highest' : 'Band', range: `${this.formatNumber(start)}–${this.formatNumber(end)}` });
+          }
+          return items;
+        },
+        refreshLayer() {
+          this.geojsonLayer.eachLayer((layer) => {
+            const props = layer.feature.properties;
+            layer.setStyle(this.styleFeature(layer.feature));
+            layer.setPopupContent(this.popupContent(props));
+          });
+        },
+        highlightFeature(e) {
+          const layer = e.target, props = layer.feature.properties;
+          this.selected = { name: props.name, value: props.value, message: `${props.name} is currently rendered with a value of ${this.formatNumber(props.value)} under the ${this.datasetMode} dataset.` };
+          layer.setStyle({ weight: 2, color: '#1f1f1f', fillOpacity: 0.94 });
+          layer.bringToFront();
+        },
+        resetFeature(e) { this.geojsonLayer.resetStyle(e.target); },
+        zoomToFeature(e) {
+          const props = e.target.feature.properties;
+          this.selected = { name: props.name, value: props.value, message: `${props.name} was selected on the map. This panel can later show more LGU-specific metadata from the shared data source.` };
+          this.map.fitBounds(e.target.getBounds(), { padding: [24, 24], maxZoom: 10 });
+        },
+        formatNumber(n) { return new Intl.NumberFormat().format(Math.round(n || 0)); }
+      }
+    }
+  </script>
+</body>
+</html>

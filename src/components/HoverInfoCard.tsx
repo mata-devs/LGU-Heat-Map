@@ -10,7 +10,7 @@ interface HoverInfoCardProps {
 
 export function HoverInfoCard({ name, value, unit, type }: HoverInfoCardProps) {
   return (
-    <div className="fixed bottom-6 right-6 z-[1000] glass-panel-subtle px-4 py-3 min-w-[200px] animate-fade-in">
+    <div className="fixed bottom-6 left-6 z-[1000] glass-panel-subtle px-4 py-3 min-w-[200px] animate-fade-in">
       {name && value != null ? (
         <div>
           <div className="flex items-center gap-1.5 mb-1">

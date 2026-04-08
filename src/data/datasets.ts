@@ -12,6 +12,7 @@ export const DATASETS: DatasetMeta[] = [
   { id: "voting_population", label: "Voting Population", unit: "registered voters", lastUpdated: "2026-03-15", source: "COMELEC" },
   { id: "fuel_allocation", label: "Fuel Allocation", unit: "liters", lastUpdated: "2026-04-05", source: "DOE Region 7" },
   { id: "power_monitoring", label: "Power Monitoring", unit: "MW", lastUpdated: "2026-04-07", source: "VECO / CEBECO" },
+  { id: "municipalities_only", label: "Municipalities (No Cities)", unit: "population indicator", lastUpdated: "2026-04-09", source: "Combined Sources" },
 ];
 
 // Sample data per LGU per dataset
@@ -115,6 +116,26 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcantara": 6, "Dumanjug": 15, "Pilar": 4,
     "Poro": 10, "Ronda": 5, "San Francisco": 12,
     "Tabuelan": 8, "Tudela": 3,
+  },
+  municipalities_only: {
+    // Municipalities only (cities excluded)
+    "Consolacion": 8500, "Liloan": 6200,
+    "Compostela": 3100, "Carmen": 4500,
+    "Catmon": 2800, "Sogod": 1900, "Borbon": 2100,
+    "Tabogon": 1500, "San Remigio": 3800,
+    "Medellin": 5600, "Daanbantayan": 28000, "Bantayan": 45000,
+    "Santa Fe": 38000, "Madridejos": 8200, "Tuburan": 2400,
+    "Asturias": 3200, "Balamban": 4100,
+    "Pinamungajan": 2900, "Aloguinsan": 5800, "Barili": 7400,
+    "Moalboal": 52000, "Badian": 18000, "Alegria": 4200,
+    "Malabuyoc": 1800, "Ginatilan": 2600, "Samboan": 9500,
+    "Oslob": 62000, "Santander": 8800, "Dalaguete": 6100,
+    "Alcoy": 3400, "Boljoon": 2200, "Argao": 11000,
+    "Sibonga": 4800, "San Fernando": 5200,
+    "Minglanilla": 7600, "Cordova": 9200,
+    "Alcantara": 2100, "Dumanjug": 3800, "Pilar": 1200,
+    "Poro": 2800, "Ronda": 1900, "San Francisco": 3200,
+    "Tabuelan": 1600, "Tudela": 900,
   },
 };
 
