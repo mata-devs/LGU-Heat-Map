@@ -59,8 +59,8 @@ export function CebuMap({ datasetId, onHover }: CebuMapProps) {
     if (!containerRef.current || mapRef.current) return;
 
     mapRef.current = L.map(containerRef.current, {
-      center: CEBU_CENTER,
-      zoom: 10,
+      center: [10.32, 123.90],
+      zoom: 11,
       maxBounds: CEBU_BOUNDS,
       maxBoundsViscosity: 0.8,
       zoomControl: false,
