@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
-import { cebuGeoJSON, CEBU_CENTER, CEBU_BOUNDS } from "@/data/cebu-geo";
+import { cebuGeoJSON, CEBU_BOUNDS } from "@/data/cebu-geo";
 import { SAMPLE_DATA, getDataRange, getColorForValue, getFillOpacity } from "@/data/datasets";
 
 interface CebuMapProps {
@@ -24,7 +24,7 @@ export function CebuMap({ datasetId, onHover }: CebuMapProps) {
 
     layerRef.current = L.geoJSON(cebuGeoJSON as any, {
       style: (feature) => {
-        const name = feature?.properties?.name || "";
+        const name = feature?.properties?.name || feature?.properties?.NAME_2 || "";
         const value = data[name] || 0;
         return {
           fillColor: getColorForValue(value, min, max),
@@ -35,8 +35,8 @@ export function CebuMap({ datasetId, onHover }: CebuMapProps) {
         };
       },
       onEachFeature: (feature, layer) => {
-        const name = feature.properties?.name || "";
-        const type = feature.properties?.type;
+        const name = feature.properties?.name || feature.properties?.NAME_2 || "";
+        const type = feature.properties?.type || (feature.properties?.ENGTYPE_2?.includes("City") ? "city" : "municipality");
         const value = data[name] || 0;
 
         layer.on({
