@@ -1,16 +1,52 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useCallback } from "react";
+import { CebuMap } from "@/components/CebuMap";
+import { TopBar } from "@/components/TopBar";
+import { SidePanel } from "@/components/SidePanel";
+import { HoverInfoCard } from "@/components/HoverInfoCard";
+import { MapLegend } from "@/components/MapLegend";
+import { DATASETS } from "@/data/datasets";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [datasetId, setDatasetId] = useState("tourist_arrivals");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [sidePanelOpen, setSidePanelOpen] = useState(true);
+  const [hovered, setHovered] = useState<{
+    name: string | null;
+    value: number | null;
+    type?: "city" | "municipality";
+  }>({ name: null, value: null });
+
+  const activeDataset = DATASETS.find(d => d.id === datasetId) || DATASETS[0];
+
+  const handleHover = useCallback((name: string | null, value: number | null, type?: "city" | "municipality") => {
+    setHovered({ name, value, type });
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="relative w-screen h-screen overflow-hidden bg-background">
+      <CebuMap datasetId={datasetId} onHover={handleHover} />
+
+      <TopBar
+        activeDataset={activeDataset}
+        onDatasetChange={setDatasetId}
+        showDropdown={showDropdown}
+        onToggleDropdown={() => setShowDropdown(p => !p)}
+        onToggleSidePanel={() => setSidePanelOpen(p => !p)}
+        sidePanelOpen={sidePanelOpen}
+      />
+
+      <SidePanel open={sidePanelOpen} dataset={activeDataset} />
+
+      <HoverInfoCard
+        name={hovered.name}
+        value={hovered.value}
+        unit={activeDataset.unit}
+        type={hovered.type}
+      />
+
+      <MapLegend dataset={activeDataset} />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
