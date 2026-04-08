@@ -32,6 +32,9 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcoy": 3400, "Boljoon": 2200, "Argao": 11000,
     "Sibonga": 4800, "Carcar City": 8900, "San Fernando": 5200,
     "Naga City": 14000, "Minglanilla": 7600, "Cordova": 9200,
+    "Alcantara": 2100, "Dumanjug": 3800, "Pilar": 1200,
+    "Poro": 2800, "Ronda": 1900, "San Francisco": 3200,
+    "Tabuelan": 1600, "Tudela": 900,
   },
   motorist_volume: {
     "Cebu City": 320000, "Lapu-Lapu City": 180000, "Mandaue City": 250000,
@@ -49,6 +52,9 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcoy": 5200, "Boljoon": 3600, "Argao": 16000,
     "Sibonga": 9800, "Carcar City": 38000, "San Fernando": 18000,
     "Naga City": 52000, "Minglanilla": 65000, "Cordova": 15000,
+    "Alcantara": 4200, "Dumanjug": 9500, "Pilar": 3100,
+    "Poro": 5800, "Ronda": 3400, "San Francisco": 6200,
+    "Tabuelan": 4800, "Tudela": 2200,
   },
   voting_population: {
     "Cebu City": 680000, "Lapu-Lapu City": 310000, "Mandaue City": 280000,
@@ -66,6 +72,9 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcoy": 14000, "Boljoon": 11000, "Argao": 52000,
     "Sibonga": 35000, "Carcar City": 88000, "San Fernando": 52000,
     "Naga City": 95000, "Minglanilla": 120000, "Cordova": 42000,
+    "Alcantara": 8500, "Dumanjug": 28000, "Pilar": 6200,
+    "Poro": 15000, "Ronda": 7800, "San Francisco": 18000,
+    "Tabuelan": 12000, "Tudela": 4500,
   },
   fuel_allocation: {
     "Cebu City": 2800000, "Lapu-Lapu City": 1500000, "Mandaue City": 1800000,
@@ -83,6 +92,9 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcoy": 48000, "Boljoon": 35000, "Argao": 155000,
     "Sibonga": 92000, "Carcar City": 350000, "San Fernando": 165000,
     "Naga City": 420000, "Minglanilla": 480000, "Cordova": 125000,
+    "Alcantara": 42000, "Dumanjug": 95000, "Pilar": 28000,
+    "Poro": 58000, "Ronda": 32000, "San Francisco": 72000,
+    "Tabuelan": 48000, "Tudela": 18000,
   },
   power_monitoring: {
     "Cebu City": 850, "Lapu-Lapu City": 420, "Mandaue City": 580,
@@ -100,6 +112,9 @@ export const SAMPLE_DATA: Record<string, Record<string, number>> = {
     "Alcoy": 8, "Boljoon": 5, "Argao": 35,
     "Sibonga": 18, "Carcar City": 72, "San Fernando": 38,
     "Naga City": 95, "Minglanilla": 110, "Cordova": 28,
+    "Alcantara": 6, "Dumanjug": 15, "Pilar": 4,
+    "Poro": 10, "Ronda": 5, "San Francisco": 12,
+    "Tabuelan": 8, "Tudela": 3,
   },
 };
 
