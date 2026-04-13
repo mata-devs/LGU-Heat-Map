@@ -79,3 +79,22 @@ npm run lint         # Run ESLint
 - HoverInfoCard.tsx: Displays municipality name and current value on hover
 - Color gradient shading based on values from Google Sheets
 - Automatic refresh or manual refresh capability
+- Boundaries toggle: Show/hide municipality boundary lines (default: off)
+
+## Google Sheets Integration
+- Configuration: `src/config/dataset-sheets.ts` - Map dataset IDs to sheet URLs
+- Data fetcher: `src/lib/google-sheets.ts` - Handles CSV parsing and caching
+- Hook: `src/hooks/use-sheet-data.ts` - React hook for sheet data fetching
+- Name normalization: `src/data/cebu-geo.ts` - Maps variations to canonical names
+
+### Sheet Format
+2 columns: Municipality/City Name | Value
+
+### Environment Variables
+- `VITE_GOOGLE_SHEET_URL` - Override all dataset URLs with a single sheet
+- Create `.env` from `.env.example`
+
+### Refresh
+- Auto-refresh: Every 5 minutes (configurable)
+- Manual: Click refresh button in top-right when sheet is configured
+- On load: Always fetches fresh data

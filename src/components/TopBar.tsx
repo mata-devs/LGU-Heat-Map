@@ -1,4 +1,4 @@
-import { ChevronDown, Layers, Clock, PanelLeft } from "lucide-react";
+import { ChevronDown, Layers, Clock, PanelLeft, MapPin } from "lucide-react";
 import { DATASETS, type DatasetMeta } from "@/data/datasets";
 
 interface TopBarProps {
@@ -8,9 +8,11 @@ interface TopBarProps {
   onToggleDropdown: () => void;
   onToggleSidePanel: () => void;
   sidePanelOpen: boolean;
+  showBoundaries: boolean;
+  onToggleBoundaries: () => void;
 }
 
-export function TopBar({ activeDataset, onDatasetChange, showDropdown, onToggleDropdown, onToggleSidePanel, sidePanelOpen }: TopBarProps) {
+export function TopBar({ activeDataset, onDatasetChange, showDropdown, onToggleDropdown, onToggleSidePanel, sidePanelOpen, showBoundaries, onToggleBoundaries }: TopBarProps) {
   return (
     <div className="fixed top-4 left-4 right-4 z-[1000] flex items-center gap-3 pointer-events-none">
       {/* Left: toggle + title */}
@@ -56,6 +58,18 @@ export function TopBar({ activeDataset, onDatasetChange, showDropdown, onToggleD
           </div>
         )}
       </div>
+
+      {/* Boundaries toggle */}
+      <button
+        onClick={onToggleBoundaries}
+        className={`glass-panel flex items-center gap-2 px-3 py-2 pointer-events-auto transition-colors ${
+          showBoundaries ? 'bg-primary/10 text-primary' : 'hover:bg-secondary/40 text-muted-foreground'
+        }`}
+        title={showBoundaries ? "Hide boundaries" : "Show boundaries"}
+      >
+        <MapPin className="w-3.5 h-3.5" />
+        <span className="text-xs">Boundaries</span>
+      </button>
 
       {/* Right: last updated */}
       <div className="ml-auto glass-panel-subtle flex items-center gap-1.5 px-3 py-2 pointer-events-auto">

@@ -17,7 +17,7 @@ export function SidePanel({ open, dataset }: SidePanelProps) {
   const avg = total / Object.keys(data).length;
 
   return (
-    <div className="fixed top-20 left-4 bottom-4 z-[999] w-72 glass-panel flex flex-col animate-fade-in overflow-hidden">
+    <div className="fixed top-16 left-4 bottom-4 z-[999] w-72 glass-panel flex flex-col animate-fade-in overflow-hidden">
       {/* Stats summary */}
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center gap-2 mb-3">

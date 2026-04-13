@@ -1,12 +1,15 @@
-import { getDataRange, formatValue } from "@/data/datasets";
+import { formatValue } from "@/data/datasets";
 import type { DatasetMeta } from "@/data/datasets";
 
 interface MapLegendProps {
   dataset: DatasetMeta;
+  dataRange?: { min: number; max: number };
 }
 
-export function MapLegend({ dataset }: MapLegendProps) {
-  const { min, max } = getDataRange(dataset.id);
+export function MapLegend({ dataset, dataRange }: MapLegendProps) {
+  const range = dataRange || { min: 0, max: 100 };
+  const min = range.min;
+  const max = range.max;
   const steps = 5;
   const colors = Array.from({ length: steps }, (_, i) => {
     const ratio = i / (steps - 1);
@@ -16,7 +19,7 @@ export function MapLegend({ dataset }: MapLegendProps) {
   });
 
   return (
-    <div className="fixed bottom-6 left-4 z-[999] glass-panel-subtle px-3 py-2.5">
+    <div className="fixed top-16 right-4 z-[999] glass-panel-subtle px-3 py-2.5">
       <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">{dataset.label}</p>
       <div className="flex items-center gap-0">
         {colors.map((c, i) => (
