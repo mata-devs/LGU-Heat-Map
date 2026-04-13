@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Large local geospatial artifacts (store outside git or use LFS)
+*.mbtiles

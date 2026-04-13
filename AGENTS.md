@@ -46,6 +46,7 @@ npm run lint         # Run ESLint
 - `src/App.tsx` - Main application component with routing
 - `src/pages/` - Page components (Index.tsx = Leaflet map, Kepler.tsx = Kepler map)
 - `src/components/` - Reusable UI components
+- `src/components/map/` - Leaflet map page components
 - `src/components/ui/` - shadcn/ui primitive components
 - `src/hooks/` - Custom React hooks for data fetching
 - `src/lib/` - Utility functions and helpers
@@ -74,8 +75,31 @@ npm run lint         # Run ESLint
 - Components should be functional and typed with TypeScript interfaces
 
 ## Map Implementation Details
-- Leaflet page: `src/components/CebuMap.tsx` for choropleth rendering
+- Leaflet page: `src/components/map/ChoroplethMap.tsx` for choropleth rendering
 - Kepler page: Separate component for advanced geoanalysis
-- HoverInfoCard.tsx: Displays municipality name and current value on hover
+- `src/components/map/LguInfoCard.tsx`: Displays municipality name and current value on hover/selection
+- `src/components/map/MapToolbar.tsx`: Dataset and basemap controls
+- `src/components/map/LguRankingPanel.tsx`: LGU ranking panel and click-to-isolate
+- `src/components/map/ChoroplethLegend.tsx`: Choropleth legend matched to active basemap palette
 - Color gradient shading based on values from Google Sheets
 - Automatic refresh or manual refresh capability
+- Boundaries are always enabled for readability
+- Basemap options: `cartoDark` and `openStreetMap`
+
+## Google Sheets Integration
+- Configuration: `src/config/dataset-sheets.ts` - Map dataset IDs to sheet URLs
+- Data fetcher: `src/lib/google-sheets.ts` - Handles CSV parsing and caching
+- Hook: `src/hooks/use-sheet-data.ts` - React hook for sheet data fetching
+- Name normalization: `src/data/cebu-geo.ts` - Maps variations to canonical names
+
+### Sheet Format
+2 columns: Municipality/City Name | Value
+
+### Environment Variables
+- `VITE_GOOGLE_SHEET_URL` - Override all dataset URLs with a single sheet
+- Create `.env` from `.env.example`
+
+### Refresh
+- Auto-refresh: Every 5 minutes (configurable)
+- Manual: Click refresh button in top-right when sheet is configured
+- On load: Always fetches fresh data

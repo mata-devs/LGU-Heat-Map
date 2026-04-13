@@ -8,34 +8,35 @@ export interface DatasetMeta {
 
 export const DATASETS: DatasetMeta[] = [
   { id: "tourist_arrivals", label: "Tourist Arrivals", unit: "visitors", lastUpdated: "2026-04-01", source: "DOT-7 Cebu" },
-  { id: "motorist_volume", label: "Motorist Volume", unit: "vehicles/day", lastUpdated: "2026-03-28", source: "DPWH Region 7" },
+  { id: "motorist_volume", label: "Motorist Volume for Fuel Allocation", unit: "vehicles/day", lastUpdated: "2026-03-28", source: "DPWH Region 7" },
   { id: "voting_population", label: "Voting Population", unit: "registered voters", lastUpdated: "2026-03-15", source: "COMELEC" },
+  { id: "power_monitoring", label: "Power Situation Monitoring", unit: "MW", lastUpdated: "2026-04-07", source: "VECO / CEBECO" },
   { id: "fuel_allocation", label: "Fuel Allocation", unit: "liters", lastUpdated: "2026-04-05", source: "DOE Region 7" },
-  { id: "power_monitoring", label: "Power Monitoring", unit: "MW", lastUpdated: "2026-04-07", source: "VECO / CEBECO" },
   { id: "municipalities_only", label: "Municipalities (No Cities)", unit: "population indicator", lastUpdated: "2026-04-09", source: "Combined Sources" },
 ];
 
 // Sample data per LGU per dataset
 export const SAMPLE_DATA: Record<string, Record<string, number>> = {
   tourist_arrivals: {
+    // Beach resort areas - high volume
+    "Oslob": 62000, "Moalboal": 52000, "Bantayan": 45000, "Santa Fe": 38000,
+    "Badian": 18000, "Cordova": 9200,
+    // Urban centers
     "Cebu City": 185000, "Lapu-Lapu City": 142000, "Mandaue City": 35000,
-    "Talisay City": 12000, "Consolacion": 8500, "Liloan": 6200,
-    "Compostela": 3100, "Danao City": 9800, "Carmen": 4500,
+    "Danao City": 9800, "Talisay City": 12000,
+    // Secondary cities & towns
+    "Carcar City": 8900, "Toledo City": 6500, "Bogo City": 7200, "Naga City": 14000,
+    // Northern municipalities
+    "Daanbantayan": 28000, "Tabogon": 1500, "Tabuelan": 1600, "Medellin": 5600,
+    "San Remigio": 3800, "Tuburan": 2400, "Asturias": 3200, "Balamban": 4100,
     "Catmon": 2800, "Sogod": 1900, "Borbon": 2100,
-    "Tabogon": 1500, "Bogo City": 7200, "San Remigio": 3800,
-    "Medellin": 5600, "Daanbantayan": 28000, "Bantayan": 45000,
-    "Santa Fe": 38000, "Madridejos": 8200, "Tuburan": 2400,
-    "Asturias": 3200, "Balamban": 4100, "Toledo City": 6500,
-    "Pinamungajan": 2900, "Aloguinsan": 5800, "Barili": 7400,
-    "Moalboal": 52000, "Badian": 18000, "Alegria": 4200,
-    "Malabuyoc": 1800, "Ginatilan": 2600, "Samboan": 9500,
-    "Oslob": 62000, "Santander": 8800, "Dalaguete": 6100,
-    "Alcoy": 3400, "Boljoon": 2200, "Argao": 11000,
-    "Sibonga": 4800, "Carcar City": 8900, "San Fernando": 5200,
-    "Naga City": 14000, "Minglanilla": 7600, "Cordova": 9200,
-    "Alcantara": 2100, "Dumanjug": 3800, "Pilar": 1200,
-    "Poro": 2800, "Ronda": 1900, "San Francisco": 3200,
-    "Tabuelan": 1600, "Tudela": 900,
+    // Other municipalities
+    "Consolacion": 8500, "Liloan": 6200, "Compostela": 3100, "Dumanjug": 3800,
+    "Pinamungajan": 2900, "Aloguinsan": 5800, "Barili": 7400, "Alcoy": 3400,
+    "Boljoon": 2200, "Argao": 11000, "Samboan": 9500, "Santander": 8800,
+    "Dalaguete": 6100, "Sibonga": 4800, "San Fernando": 5200, "Ginatilan": 2600,
+    "Alegria": 4200, "Malabuyoc": 1800, "Ronda": 1900, "Minglanilla": 7600,
+    "Alcantara": 2100, "Pilar": 1200, "Poro": 2800, "Madridejos": 8200,
   },
   motorist_volume: {
     "Cebu City": 320000, "Lapu-Lapu City": 180000, "Mandaue City": 250000,
