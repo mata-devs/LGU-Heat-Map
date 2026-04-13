@@ -8,7 +8,7 @@
  *   const { data, loading, error, refresh } = useSheetData(sheetUrl);
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   fetchSheetData,
   sheetDataToRecord,
@@ -38,9 +38,10 @@ interface CachedData {
 /**
  * Hook to fetch data from Google Sheets
  * @param sheetUrl - The public Google Sheet URL
+ * @param sheetName - Optional sheet/tab name to fetch
  * @param autoRefresh - Enable auto-refresh (default: true)
  */
-export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
+export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRefresh = true) {
   const [state, setState] = useState<SheetDataState>({
     data: {},
     min: 0,
@@ -58,13 +59,15 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
       return;
     }
 
+    console.log('%c📡 FETCH: Starting', 'color: orange', { sheetName, showLoading });
+    
     if (showLoading) {
       setState(prev => ({ ...prev, loading: true, error: null }));
     }
 
     try {
-      // Check localStorage cache first
-      const cacheKey = `${SHEET_CONFIG.CACHE_KEY}-${new URL(sheetUrl).pathname}`;
+      // Check localStorage cache first - include sheetName in cache key
+      const cacheKey = `${SHEET_CONFIG.CACHE_KEY}-${new URL(sheetUrl).pathname}-${sheetName || 'default'}`;
       const cachedStr = localStorage.getItem(cacheKey);
       
       if (cachedStr) {
@@ -80,8 +83,8 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
               error: null,
             });
             // Still fetch fresh data in background
-            fetchSheetData(sheetUrl).then((rows) => {
-              const data = sheetDataToRecord(rows);
+            fetchSheetData(sheetUrl, sheetName).then((result) => {
+              const data = sheetDataToRecord(result.rows);
               const { min, max } = getDataRange(data);
               const newCached: CachedData = {
                 data,
@@ -110,8 +113,10 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
       }
 
       // Fetch fresh data
-      const rows: SheetRow[] = await fetchSheetData(sheetUrl);
-      const data = sheetDataToRecord(rows);
+      const result = await fetchSheetData(sheetUrl, sheetName);
+      const data = sheetDataToRecord(result.rows);
+      console.log('%c📡 FETCH: Got data', 'color: green', { sheetName, rowCount: result.rows.length, sampleData: data['Cebu City'] });
+      
       const { min, max } = getDataRange(data);
       const timestamp = Date.now();
       const lastUpdated = new Date().toISOString();
@@ -142,14 +147,14 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
         error: errorMessage,
       }));
     }
-  }, [sheetUrl]);
+  }, [sheetUrl, sheetName]);
 
-  // Initial fetch
+  // Initial fetch - also triggers when sheetName changes
   useEffect(() => {
     if (sheetUrl) {
       fetchData(true);
     }
-  }, [sheetUrl, fetchData]);
+  }, [sheetUrl, sheetName, fetchData]);
 
   // Auto-refresh interval
   useEffect(() => {
@@ -164,17 +169,17 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefresh, sheetUrl, fetchData]);
+  }, [autoRefresh, sheetUrl, sheetName, fetchData]);
 
   // Refresh function exposed to caller
   const refresh = useCallback(() => {
     // Clear cache before refetching
     if (sheetUrl) {
-      const cacheKey = `${SHEET_CONFIG.CACHE_KEY}-${new URL(sheetUrl).pathname}`;
+      const cacheKey = `${SHEET_CONFIG.CACHE_KEY}-${new URL(sheetUrl).pathname}-${sheetName || 'default'}`;
       localStorage.removeItem(cacheKey);
     }
     return fetchData(true);
-  }, [sheetUrl, fetchData]);
+  }, [sheetUrl, sheetName, fetchData]);
 
   return {
     ...state,
@@ -188,6 +193,7 @@ export function useSheetData(sheetUrl: string | null, autoRefresh = true) {
 export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
   const [datasets, setDatasets] = useState<Record<string, SheetDataState>>({});
   const [isAnyLoading, setIsAnyLoading] = useState(true);
+  const sheetUrlsKey = useMemo(() => JSON.stringify(sheetUrls), [sheetUrls]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -198,8 +204,8 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
       await Promise.all(
         Object.entries(sheetUrls).map(async ([id, url]) => {
           try {
-            const rows = await fetchSheetData(url);
-            const data = sheetDataToRecord(rows);
+            const result = await fetchSheetData(url);
+            const data = sheetDataToRecord(result.rows);
             const { min, max } = getDataRange(data);
             results[id] = {
               data,
@@ -227,7 +233,7 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
     };
 
     fetchAll();
-  }, [JSON.stringify(sheetUrls)]);
+  }, [sheetUrls]);
 
   const refreshAll = useCallback(async () => {
     setIsAnyLoading(true);
@@ -240,8 +246,8 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
         localStorage.removeItem(cacheKey);
         
         try {
-          const rows = await fetchSheetData(url);
-          const data = sheetDataToRecord(rows);
+          const result = await fetchSheetData(url);
+          const data = sheetDataToRecord(result.rows);
           const { min, max } = getDataRange(data);
           results[id] = {
             data,
@@ -266,7 +272,7 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
     
     setDatasets(results);
     setIsAnyLoading(false);
-  }, [JSON.stringify(sheetUrls)]);
+  }, [sheetUrls]);
 
   return {
     datasets,
