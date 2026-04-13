@@ -51,6 +51,11 @@ src/
 ├── hooks/          # Custom React hooks
 ├── lib/            # Utility functions
 └── data/           # Data transformation functions
+
+public/
+└── data/
+  ├── geo/        # GeoJSON/JSON boundaries and region files
+  └── tiles/      # MBTiles source artifacts
 ```
 
 ## Available Scripts

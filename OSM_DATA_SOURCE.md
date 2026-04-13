@@ -4,7 +4,7 @@
 
 **Branch:** `openstreetmap`
 
-**Data File:** `public/cebu-municipalities.geojson`
+**Data File:** `public/data/geo/cebu-lgu-boundaries.geojson`
 
 **Source:** OpenStreetMap-derived administrative boundaries
 
@@ -18,6 +18,12 @@
 **Last Updated:** April 10, 2026
 
 **Format:** GeoJSON FeatureCollection
+
+**Related Local Assets:**
+- `public/data/geo/cebu-region-boundary.json`
+- `public/data/geo/cebu-municipalities.raw.json`
+- `public/data/tiles/philippines-municipalities.mbtiles`
+- `public/data/tiles/philippines-provinces.mbtiles`
 
 **Features per municipality:**
 - name: Municipality/City name

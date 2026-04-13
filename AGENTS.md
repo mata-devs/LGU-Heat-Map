@@ -46,6 +46,7 @@ npm run lint         # Run ESLint
 - `src/App.tsx` - Main application component with routing
 - `src/pages/` - Page components (Index.tsx = Leaflet map, Kepler.tsx = Kepler map)
 - `src/components/` - Reusable UI components
+- `src/components/map/` - Leaflet map page components
 - `src/components/ui/` - shadcn/ui primitive components
 - `src/hooks/` - Custom React hooks for data fetching
 - `src/lib/` - Utility functions and helpers
@@ -74,12 +75,16 @@ npm run lint         # Run ESLint
 - Components should be functional and typed with TypeScript interfaces
 
 ## Map Implementation Details
-- Leaflet page: `src/components/CebuMap.tsx` for choropleth rendering
+- Leaflet page: `src/components/map/ChoroplethMap.tsx` for choropleth rendering
 - Kepler page: Separate component for advanced geoanalysis
-- HoverInfoCard.tsx: Displays municipality name and current value on hover
+- `src/components/map/LguInfoCard.tsx`: Displays municipality name and current value on hover/selection
+- `src/components/map/MapToolbar.tsx`: Dataset and basemap controls
+- `src/components/map/LguRankingPanel.tsx`: LGU ranking panel and click-to-isolate
+- `src/components/map/ChoroplethLegend.tsx`: Choropleth legend matched to active basemap palette
 - Color gradient shading based on values from Google Sheets
 - Automatic refresh or manual refresh capability
-- Boundaries toggle: Show/hide municipality boundary lines (default: off)
+- Boundaries are always enabled for readability
+- Basemap options: `cartoDark` and `openStreetMap`
 
 ## Google Sheets Integration
 - Configuration: `src/config/dataset-sheets.ts` - Map dataset IDs to sheet URLs

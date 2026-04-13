@@ -1,6 +1,7 @@
 /**
  * Minimal GeoJSON loader and utilities
- * Uses accurate Cebu municipalities from public/cebu-municipalities.geojson (54 municipalities)
+ * Uses accurate Cebu municipalities from public/data/geo/cebu-lgu-boundaries.geojson (53 municipalities)
+ * Sourced from GADM v4.1
  */
 
 import type { GeoJSON } from 'geojson';
@@ -10,8 +11,8 @@ import type { GeoJSON } from 'geojson';
  */
 export const nameNormalizer: Record<string, string> = {
   // === Direct municipality mappings ===
-  'alcantra': 'Alcantara',
-  'alco': 'Alcoy',
+  'alcantara': 'Alcantara',
+  'alcoy': 'Alcoy',
   'alegria': 'Alegria',
   'alegria-cebu': 'Alegria',
   'aloguinsan': 'Aloguinsan',
@@ -27,7 +28,7 @@ export const nameNormalizer: Record<string, string> = {
   'carmen': 'Carmen',
   'compostela': 'Compostela',
   'consolacion': 'Consolacion',
-  'cordova': 'Cordova',
+  'cordova': 'Cordoba',
   'daanbantayan': 'Daanbantayan',
   'dalaguete': 'Dalaguete',
   'dumanjug': 'Dumanjug',
@@ -153,13 +154,13 @@ export async function loadCebuGeoJSON(): Promise<void> {
   if (cebuGeoJSON) return; // Already loaded
 
   try {
-    const response = await fetch('/cebu-municipalities.geojson');
+    const response = await fetch('/data/geo/cebu-lgu-boundaries.geojson');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     cebuGeoJSON = await response.json();
     console.log(`✓ Loaded ${cebuGeoJSON.features.length} Cebu municipalities from GeoJSON`);
   } catch (error) {
-    console.error('✗ Failed to load cebu-municipalities.geojson from public folder:', error);
+    console.error('✗ Failed to load data/geo/cebu-lgu-boundaries.geojson from public folder:', error);
     throw error;
   }
 }
