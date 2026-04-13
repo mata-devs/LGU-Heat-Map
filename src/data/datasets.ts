@@ -8,10 +8,10 @@ export interface DatasetMeta {
 
 export const DATASETS: DatasetMeta[] = [
   { id: "tourist_arrivals", label: "Tourist Arrivals", unit: "visitors", lastUpdated: "2026-04-01", source: "DOT-7 Cebu" },
-  { id: "motorist_volume", label: "Motorist Volume", unit: "vehicles/day", lastUpdated: "2026-03-28", source: "DPWH Region 7" },
+  { id: "motorist_volume", label: "Motorist Volume for Fuel Allocation", unit: "vehicles/day", lastUpdated: "2026-03-28", source: "DPWH Region 7" },
   { id: "voting_population", label: "Voting Population", unit: "registered voters", lastUpdated: "2026-03-15", source: "COMELEC" },
+  { id: "power_monitoring", label: "Power Situation Monitoring", unit: "MW", lastUpdated: "2026-04-07", source: "VECO / CEBECO" },
   { id: "fuel_allocation", label: "Fuel Allocation", unit: "liters", lastUpdated: "2026-04-05", source: "DOE Region 7" },
-  { id: "power_monitoring", label: "Power Monitoring", unit: "MW", lastUpdated: "2026-04-07", source: "VECO / CEBECO" },
   { id: "municipalities_only", label: "Municipalities (No Cities)", unit: "population indicator", lastUpdated: "2026-04-09", source: "Combined Sources" },
 ];
 

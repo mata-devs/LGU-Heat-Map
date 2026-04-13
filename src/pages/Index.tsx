@@ -1,121 +1,155 @@
-import { useState, useCallback, useEffect } from "react";
-import { CebuMap } from "@/components/CebuMap";
-import { TopBar } from "@/components/TopBar";
-import { SidePanel } from "@/components/SidePanel";
-import { HoverInfoCard } from "@/components/HoverInfoCard";
-import { MapLegend } from "@/components/MapLegend";
-import { DATASETS } from "@/data/datasets";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { ChoroplethMap } from "@/components/map/ChoroplethMap";
+import { MapToolbar } from "@/components/map/MapToolbar";
+import { LguRankingPanel } from "@/components/map/LguRankingPanel";
+import { LguInfoCard } from "@/components/map/LguInfoCard";
+import { ChoroplethLegend } from "@/components/map/ChoroplethLegend";
 import { SAMPLE_DATA, getDataRange } from "@/data/datasets";
-import { useSheetData } from "@/hooks/use-sheet-data";
-import { getEffectiveSheetUrl, hasAnySheetConfigured } from "@/config/dataset-sheets";
-import { RefreshCw } from "lucide-react";
+import { useDynamicDatasets } from "@/config/dataset-sheets";
+
+interface DatasetOption {
+  id: string;
+  label: string;
+  unit?: string;
+  source?: string;
+}
 
 const Index = () => {
-  const [datasetId, setDatasetId] = useState("tourist_arrivals");
+  const [datasetId, setDatasetId] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
-  const [showBoundaries, setShowBoundaries] = useState(false);
+  const [tileLayer, setTileLayer] = useState<'cartoDark' | 'openStreetMap'>('cartoDark');
+  const [selectedLGU, setSelectedLGU] = useState<string | null>(null);
   const [hovered, setHovered] = useState<{
     name: string | null;
     value: number | null;
     type?: "city" | "municipality";
   }>({ name: null, value: null });
 
-  const activeDataset = DATASETS.find(d => d.id === datasetId) || DATASETS[0];
+  // Dynamically discover datasets from Google Sheets - NO HARD CODING!
+  const { sheets, datasetData, loading: sheetsLoading, refresh } = useDynamicDatasets();
   
-  // Get sheet URL for current dataset
-  const sheetUrl = getEffectiveSheetUrl(datasetId);
+  // Set default dataset once sheets are loaded
+  useEffect(() => {
+    if (sheets.length > 0 && !datasetId) {
+      setDatasetId(sheets[0].id);
+    }
+  }, [sheets, datasetId]);
+
+  // Get current dataset info from preloaded data - INSTANT switch!
+  const currentData = datasetData[datasetId];
+  const sheetData = currentData?.data || {};
+  const min = currentData?.min ?? 0;
+  const max = currentData?.max ?? 100;
+  const lastUpdated = currentData?.lastUpdated;
+
+  const useSheetData_ = Object.keys(sheetData).length > 0;
   
-  // Use sheet data hook - returns fallback data if no sheet configured
-  const { 
-    data: sheetData, 
-    min, 
-    max, 
-    lastUpdated, 
-    loading: sheetLoading, 
-    error: sheetError,
-    refresh 
-  } = useSheetData(sheetUrl);
-  
-  // Determine if we should use sheet data or fallback
-  const useSheetData_ = hasAnySheetConfigured() && sheetUrl.length > 0;
-  
-  // Merge sheet data with fallback for any missing municipalities
-  const effectiveData = useSheetData_ && Object.keys(sheetData).length > 0
-    ? { ...SAMPLE_DATA[datasetId], ...sheetData }
-    : SAMPLE_DATA[datasetId];
-  
-  // Calculate data range
-  const effectiveRange = useSheetData_ && Object.keys(sheetData).length > 0
-    ? { min, max }
-    : getDataRange(datasetId);
+  // Use sheet data if available, otherwise fall back to sample data
+  const effectiveData = useSheetData_ ? sheetData : SAMPLE_DATA.tourist_arrivals;
+  const effectiveRange = useSheetData_ ? { min, max } : getDataRange('tourist_arrivals');
+
+  // Get active dataset label
+  const activeDataset = sheets.find(s => s.id === datasetId) || { 
+    id: datasetId || 'unknown', 
+    label: datasetId || 'Unknown', 
+    name: datasetId || 'unknown',
+    unit: 'value',
+  };
 
   const handleHover = useCallback((name: string | null, value: number | null, type?: "city" | "municipality") => {
     setHovered({ name, value, type });
   }, []);
 
-  // Update last updated timestamp when using sheet data
-  useEffect(() => {
-    if (useSheetData_ && lastUpdated) {
-      // Could update activeDataset.lastUpdated here if needed
-    }
-  }, [useSheetData_, lastUpdated]);
+  const highlightedLGU = selectedLGU;
+  const selectedValue = selectedLGU ? effectiveData[selectedLGU] : undefined;
+  const infoCardName = hovered.name ?? selectedLGU;
+  const infoCardValue = hovered.name ? hovered.value : typeof selectedValue === "number" ? selectedValue : null;
+  const infoCardType = hovered.name ? hovered.type : selectedLGU ? "municipality" : undefined;
 
+  // Build dataset options for dropdown from dynamically discovered sheets
+  const datasetOptions: DatasetOption[] = useMemo(() => {
+    return sheets.map(sheet => ({
+      id: sheet.id,
+      label: sheet.label,
+      unit: sheet.unit,
+      source: datasetData[sheet.id]?.source || 'Google Sheets',
+    }));
+  }, [sheets, datasetData]);
+
+  // Handle dataset change - this triggers fetching from new sheet tab
+  const handleDatasetChange = useCallback((newId: string) => {
+    setDatasetId(newId);
+    setShowDropdown(false);
+  }, []);
+
+  // Always render map - show loading briefly, then data
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-background">
-      <CebuMap 
+      <ChoroplethMap 
         datasetId={datasetId} 
         onHover={handleHover}
         data={effectiveData}
         dataRange={effectiveRange}
         dataSource={useSheetData_ ? 'sheet' : 'fallback'}
-        showBoundaries={showBoundaries}
+        tileLayer={tileLayer}
+        highlightedLGU={highlightedLGU}
+        isolatedLGU={selectedLGU}
       />
 
-      <TopBar
-        activeDataset={activeDataset}
-        onDatasetChange={setDatasetId}
+      <MapToolbar
+        datasetOptions={datasetOptions}
+        activeDataset={datasetOptions.find(d => d.id === datasetId) || datasetOptions[0]}
+        activeDatasetId={datasetId}
+        onDatasetChange={handleDatasetChange}
         showDropdown={showDropdown}
         onToggleDropdown={() => setShowDropdown(p => !p)}
         onToggleSidePanel={() => setSidePanelOpen(p => !p)}
         sidePanelOpen={sidePanelOpen}
-        showBoundaries={showBoundaries}
-        onToggleBoundaries={() => setShowBoundaries(p => !p)}
+        tileLayer={tileLayer}
+        onToggleTileLayer={() => setTileLayer(p => p === 'cartoDark' ? 'openStreetMap' : 'cartoDark')}
+        lastUpdated={lastUpdated ? new Date(lastUpdated).toLocaleDateString() : undefined}
+        showRefresh={true}
+        onRefresh={refresh}
+        isRefreshing={sheetsLoading}
       />
 
-      {/* Refresh button - visible when using sheet data */}
-      {useSheetData_ && (
-        <button
-          onClick={() => refresh()}
-          disabled={sheetLoading}
-          className="fixed top-20 right-4 z-[1000] glass-panel flex items-center gap-2 px-3 py-2 hover:bg-secondary/40 transition-colors disabled:opacity-50"
-          title="Refresh data from Google Sheet"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${sheetLoading ? 'animate-spin' : ''}`} />
-          <span className="text-xs text-muted-foreground">
-            {sheetLoading ? 'Refreshing...' : 'Refresh'}
-          </span>
-        </button>
-      )}
-
-      <SidePanel 
+      <LguRankingPanel 
         open={sidePanelOpen} 
+        data={effectiveData}
+        highlightedLGU={highlightedLGU}
+        selectedLGU={selectedLGU}
+        onSelectLGU={setSelectedLGU}
         dataset={{
-          ...activeDataset,
-          lastUpdated: useSheetData_ && lastUpdated 
-            ? new Date(lastUpdated).toLocaleDateString() 
-            : activeDataset.lastUpdated
+          id: activeDataset.id,
+          label: activeDataset.label,
+          unit: 'value',
+          lastUpdated: lastUpdated ? new Date(lastUpdated).toLocaleDateString() : new Date().toISOString().split('T')[0],
+          source: 'Google Sheets'
         }} 
       />
 
-      <HoverInfoCard
-        name={hovered.name}
-        value={hovered.value}
-        unit={activeDataset.unit}
-        type={hovered.type}
+      <LguInfoCard
+        name={infoCardName}
+        value={infoCardValue}
+        unit={activeDataset.unit || 'value'}
+        type={infoCardType}
+        sidePanelOpen={sidePanelOpen}
+        canClearSelection={Boolean(selectedLGU)}
+        onClearSelection={() => setSelectedLGU(null)}
       />
 
-      <MapLegend dataset={activeDataset} dataRange={effectiveRange} />
+      <ChoroplethLegend 
+        dataset={{
+          id: activeDataset.id,
+          label: activeDataset.label,
+          unit: 'value',
+          lastUpdated: '',
+          source: ''
+        }} 
+        dataRange={effectiveRange}
+        tileLayer={tileLayer}
+      />
     </div>
   );
 };

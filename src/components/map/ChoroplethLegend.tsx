@@ -1,22 +1,38 @@
 import { formatValue } from "@/data/datasets";
 import type { DatasetMeta } from "@/data/datasets";
 
-interface MapLegendProps {
+interface ChoroplethLegendProps {
   dataset: DatasetMeta;
   dataRange?: { min: number; max: number };
+  tileLayer?: 'cartoDark' | 'openStreetMap';
 }
 
-export function MapLegend({ dataset, dataRange }: MapLegendProps) {
+export function ChoroplethLegend({ dataset, dataRange, tileLayer = 'cartoDark' }: ChoroplethLegendProps) {
   const range = dataRange || { min: 0, max: 100 };
   const min = range.min;
   const max = range.max;
-  const steps = 5;
-  const colors = Array.from({ length: steps }, (_, i) => {
-    const ratio = i / (steps - 1);
-    const lightness = 82 - ratio * 60;
-    const saturation = 45 + ratio * 30;
-    return `hsl(174, ${saturation}%, ${lightness}%)`;
-  });
+
+  const darkColors = [
+    '#134e4a',
+    '#115e59',
+    '#0f766e',
+    '#0d9488',
+    '#14b8a6',
+    '#2dd4bf',
+    '#5eead4',
+  ];
+
+  const lightColors = [
+    '#fecaca',
+    '#fca5a5',
+    '#f87171',
+    '#ef4444',
+    '#dc2626',
+    '#991b1b',
+    '#7f1d1d',
+  ];
+
+  const colors = tileLayer === 'cartoDark' ? darkColors : lightColors;
 
   return (
     <div className="fixed top-16 right-4 z-[999] glass-panel-subtle px-3 py-2.5">
