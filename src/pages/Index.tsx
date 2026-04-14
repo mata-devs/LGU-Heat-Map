@@ -4,9 +4,8 @@ import { MapToolbar } from "@/components/map/MapToolbar";
 import { LguRankingPanel } from "@/components/map/LguRankingPanel";
 import { LguInfoCard } from "@/components/map/LguInfoCard";
 import { ChoroplethLegend } from "@/components/map/ChoroplethLegend";
-import { SAMPLE_DATA, getDataRange } from "@/data/datasets";
 import { normalizeLocationName } from "@/data/cebu-geo";
-import { useDynamicDatasets } from "@/config/dataset-sheets";
+import { DYNAMIC_REFRESH_INTERVAL_MS, useDynamicDatasets } from "@/config/dataset-sheets";
 
 interface DatasetOption {
   id: string;
@@ -16,10 +15,16 @@ interface DatasetOption {
 }
 
 const Index = () => {
+  const refreshStorageKey = "cebu-insights-auto-refresh-minutes";
   const [datasetId, setDatasetId] = useState<string>("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [sidePanelOpen, setSidePanelOpen] = useState(true);
   const [tileLayer, setTileLayer] = useState<'cartoDark' | 'openStreetMap'>('cartoDark');
+  const [autoRefreshMinutes, setAutoRefreshMinutes] = useState<number>(() => {
+    const raw = localStorage.getItem(refreshStorageKey);
+    const parsed = raw ? Number(raw) : NaN;
+    return [1, 3, 5].includes(parsed) ? parsed : Math.round(DYNAMIC_REFRESH_INTERVAL_MS / 60000);
+  });
   const [selectedLGU, setSelectedLGU] = useState<string | null>(null);
   const [hovered, setHovered] = useState<{
     name: string | null;
@@ -27,8 +32,12 @@ const Index = () => {
     type?: "city" | "municipality";
   }>({ name: null, value: null });
 
+  useEffect(() => {
+    localStorage.setItem(refreshStorageKey, String(autoRefreshMinutes));
+  }, [autoRefreshMinutes]);
+
   // Dynamically discover datasets from Google Sheets - NO HARD CODING!
-  const { sheets, datasetData, loading: sheetsLoading, refresh } = useDynamicDatasets();
+  const { sheets, datasetData, loading: sheetsLoading, error: sheetsError, refresh } = useDynamicDatasets(autoRefreshMinutes * 60 * 1000);
   
   // Set default dataset once sheets are loaded
   useEffect(() => {
@@ -43,12 +52,10 @@ const Index = () => {
   const min = currentData?.min ?? 0;
   const max = currentData?.max ?? 100;
   const lastUpdated = currentData?.lastUpdated;
-
-  const useSheetData_ = Object.keys(sheetData).length > 0;
   
-  // Use sheet data if available, otherwise fall back to sample data
-  const effectiveData = useSheetData_ ? sheetData : SAMPLE_DATA.tourist_arrivals;
-  const effectiveRange = useSheetData_ ? { min, max } : getDataRange('tourist_arrivals');
+  // Google Sheets is the only source of LGU values.
+  const effectiveData = sheetData;
+  const effectiveRange = { min, max };
 
   // Normalize all LGU keys to canonical GeoJSON names so selection/highlighting is consistent.
   const normalizedData = useMemo(() => {
@@ -59,6 +66,7 @@ const Index = () => {
     }
     return out;
   }, [effectiveData]);
+  const hasData = Object.keys(normalizedData).length > 0;
 
   // Get active dataset label
   const activeDataset = sheets.find(s => s.id === datasetId) || { 
@@ -102,11 +110,34 @@ const Index = () => {
         onHover={handleHover}
         data={normalizedData}
         dataRange={effectiveRange}
-        dataSource={useSheetData_ ? 'sheet' : 'fallback'}
+        dataSource={'sheet'}
         tileLayer={tileLayer}
         highlightedLGU={highlightedLGU}
         isolatedLGU={selectedLGU}
       />
+
+      {sheetsLoading && !hasData && (
+        <div className="fixed inset-0 z-[1002] pointer-events-none flex items-center justify-center">
+          <div className="glass-panel px-4 py-3 text-sm text-foreground/90">
+            Loading latest values from Google Sheets...
+          </div>
+        </div>
+      )}
+
+      {!sheetsLoading && sheetsError && !hasData && (
+        <div className="fixed inset-0 z-[1002] pointer-events-none flex items-center justify-center">
+          <div className="glass-panel px-4 py-3 max-w-md text-sm text-foreground/90 pointer-events-auto">
+            <p className="font-semibold mb-1">Unable to load Google Sheets data</p>
+            <p className="text-muted-foreground mb-3">{sheetsError}</p>
+            <button
+              onClick={refresh}
+              className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 transition"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       <MapToolbar
         datasetOptions={datasetOptions}
@@ -123,6 +154,9 @@ const Index = () => {
         showRefresh={true}
         onRefresh={refresh}
         isRefreshing={sheetsLoading}
+        autoRefreshMinutes={autoRefreshMinutes}
+        autoRefreshOptions={[1, 3, 5]}
+        onAutoRefreshMinutesChange={setAutoRefreshMinutes}
       />
 
       <LguRankingPanel 

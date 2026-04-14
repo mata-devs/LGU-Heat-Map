@@ -52,17 +52,38 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
   });
   
   const intervalRef = useRef<number | null>(null);
+  const requestIdRef = useRef(0);
+  const fetchInFlightRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchData = useCallback(async (showLoading = true) => {
+    if (!showLoading && fetchInFlightRef.current) {
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
+    fetchInFlightRef.current = true;
+    const isStale = () => !isMountedRef.current || requestId !== requestIdRef.current;
+
     if (!sheetUrl) {
-      setState(prev => ({ ...prev, error: 'No sheet URL configured', loading: false }));
+      if (!isStale()) {
+        setState(prev => ({ ...prev, error: 'No sheet URL configured', loading: false }));
+      }
       return;
     }
 
     console.log('%c📡 FETCH: Starting', 'color: orange', { sheetName, showLoading });
     
     if (showLoading) {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      if (!isStale()) {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+      }
     }
 
     try {
@@ -74,16 +95,20 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
         try {
           const cached: CachedData = JSON.parse(cachedStr);
           if (isCacheValid(cached)) {
-            setState({
-              data: cached.data,
-              min: cached.min,
-              max: cached.max,
-              lastUpdated: cached.lastUpdated,
-              loading: false,
-              error: null,
-            });
+            if (!isStale()) {
+              setState({
+                data: cached.data,
+                min: cached.min,
+                max: cached.max,
+                lastUpdated: cached.lastUpdated,
+                loading: false,
+                error: null,
+              });
+            }
+
             // Still fetch fresh data in background
-            fetchSheetData(sheetUrl, sheetName).then((result) => {
+            try {
+              const result = await fetchSheetData(sheetUrl, sheetName);
               const data = sheetDataToRecord(result.rows);
               const { min, max } = getDataRange(data);
               const newCached: CachedData = {
@@ -94,6 +119,11 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
                 lastUpdated: new Date().toISOString(),
               };
               localStorage.setItem(cacheKey, JSON.stringify(newCached));
+
+              if (isStale()) {
+                return;
+              }
+
               setState({
                 data,
                 min,
@@ -102,9 +132,10 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
                 loading: false,
                 error: null,
               });
-            }).catch(() => {
+            } catch {
               // Silently fail - we have cached data
-            });
+            }
+
             return;
           }
         } catch {
@@ -116,6 +147,10 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
       const result = await fetchSheetData(sheetUrl, sheetName);
       const data = sheetDataToRecord(result.rows);
       console.log('%c📡 FETCH: Got data', 'color: green', { sheetName, rowCount: result.rows.length, sampleData: data['Cebu City'] });
+
+      if (isStale()) {
+        return;
+      }
       
       const { min, max } = getDataRange(data);
       const timestamp = Date.now();
@@ -140,12 +175,20 @@ export function useSheetData(sheetUrl: string | null, sheetName?: string, autoRe
         error: null,
       });
     } catch (err) {
+      if (isStale()) {
+        return;
+      }
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sheet data';
       setState(prev => ({
         ...prev,
         loading: false,
         error: errorMessage,
       }));
+    } finally {
+      if (requestId === requestIdRef.current) {
+        fetchInFlightRef.current = false;
+      }
     }
   }, [sheetUrl, sheetName]);
 
@@ -194,15 +237,30 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
   const [datasets, setDatasets] = useState<Record<string, SheetDataState>>({});
   const [isAnyLoading, setIsAnyLoading] = useState(true);
   const sheetUrlsKey = useMemo(() => JSON.stringify(sheetUrls), [sheetUrls]);
+  const sheetEntries = useMemo(
+    () => Object.entries(JSON.parse(sheetUrlsKey) as Record<string, string>),
+    [sheetUrlsKey]
+  );
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const fetchAll = async () => {
-      setIsAnyLoading(true);
+      const requestId = ++requestIdRef.current;
+      if (isMountedRef.current) {
+        setIsAnyLoading(true);
+      }
       
       const results: Record<string, SheetDataState> = {};
       
       await Promise.all(
-        Object.entries(sheetUrls).map(async ([id, url]) => {
+        sheetEntries.map(async ([id, url]) => {
           try {
             const result = await fetchSheetData(url);
             const data = sheetDataToRecord(result.rows);
@@ -227,21 +285,28 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
           }
         })
       );
+
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
       
       setDatasets(results);
       setIsAnyLoading(false);
     };
 
     fetchAll();
-  }, [sheetUrls]);
+  }, [sheetEntries]);
 
   const refreshAll = useCallback(async () => {
-    setIsAnyLoading(true);
+    const requestId = ++requestIdRef.current;
+    if (isMountedRef.current) {
+      setIsAnyLoading(true);
+    }
     
     const results: Record<string, SheetDataState> = {};
     
     await Promise.all(
-      Object.entries(sheetUrls).map(async ([id, url]) => {
+      sheetEntries.map(async ([id, url]) => {
         const cacheKey = `${SHEET_CONFIG.CACHE_KEY}-${new URL(url).pathname}`;
         localStorage.removeItem(cacheKey);
         
@@ -269,10 +334,14 @@ export function useMultiDatasetSheets(sheetUrls: Record<string, string>) {
         }
       })
     );
+
+    if (!isMountedRef.current || requestId !== requestIdRef.current) {
+      return;
+    }
     
     setDatasets(results);
     setIsAnyLoading(false);
-  }, [sheetUrls]);
+  }, [sheetEntries]);
 
   return {
     datasets,

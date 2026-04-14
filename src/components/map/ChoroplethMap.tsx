@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import L from "leaflet";
 import type { GeoJSON as GeoJSONType, Feature } from "geojson";
 import { normalizeLocationName } from "@/data/cebu-geo";
@@ -52,7 +52,12 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
   const mapRef = useRef<L.Map | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const renderTokenRef = useRef(0);
+  const dataRef = useRef(data);
+  const rangeRef = useRef(dataRange);
+  const highlightedLGURef = useRef(highlightedLGU);
+  const isolatedLGURef = useRef(isolatedLGU);
+  const tileLayerValueRef = useRef(tileLayer);
+  const onHoverRef = useRef(onHover);
 
   // Initialize map
   useEffect(() => {
@@ -129,100 +134,104 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
     return colors[index];
   };
 
-  // Load and render GeoJSON layer
-  useEffect(() => {
-    const loadGeoJSON = async () => {
-      const token = ++renderTokenRef.current;
+  const styleFeature = useCallback((feature: Feature | undefined) => {
+    const name = feature?.properties?.name || feature?.properties?.NAME || '';
+    const canonicalName = normalizeLocationName(name) || name;
+    const currentData = dataRef.current;
+    const currentRange = rangeRef.current;
+    const currentTileLayer = tileLayerValueRef.current;
+    const currentHighlighted = highlightedLGURef.current;
+    const currentIsolated = isolatedLGURef.current;
 
-      // Guard against null map during hot reload
-      if (!mapRef.current) {
-        console.warn('GeoJSON: map not ready, skipping load');
-        return;
-      }
-      
+    const value = currentData[canonicalName] ?? currentData[name];
+    const isHighlighted = currentHighlighted === canonicalName;
+    const isDimmed = Boolean(currentHighlighted && !isHighlighted);
+    const isHiddenByIsolation = Boolean(currentIsolated && currentIsolated !== canonicalName);
+    const isDark = currentTileLayer === 'cartoDark';
+    const color = getColor(value !== undefined ? value : undefined, currentRange.min, currentRange.max, currentTileLayer);
+    const boundaryColor = isDark ? '#14b8a6' : '#334155';
+    const boundaryWeight = 2.5;
+    const highlightStroke = isDark ? '#a7f3d0' : '#7f1d1d';
+
+    return {
+      color: isHiddenByIsolation ? 'transparent' : isHighlighted ? highlightStroke : boundaryColor,
+      weight: isHiddenByIsolation ? 0 : isHighlighted ? 4 : boundaryWeight,
+      opacity: isHiddenByIsolation ? 0 : isDimmed ? 0.2 : 1,
+      fillOpacity: isHiddenByIsolation ? 0 : isHighlighted ? 0.8 : isDimmed ? 0.1 : 0.6,
+      fillColor: isHiddenByIsolation ? 'transparent' : color,
+    };
+  }, []);
+
+  // Keep latest props in refs so style/handlers can update without recreating the layer.
+  useEffect(() => {
+    dataRef.current = data;
+    rangeRef.current = dataRange;
+    highlightedLGURef.current = highlightedLGU;
+    isolatedLGURef.current = isolatedLGU;
+    tileLayerValueRef.current = tileLayer;
+    onHoverRef.current = onHover;
+
+    if (geoJsonLayerRef.current) {
+      geoJsonLayerRef.current.setStyle(styleFeature);
+    }
+  }, [data, dataRange, highlightedLGU, isolatedLGU, onHover, tileLayer, styleFeature]);
+
+  // Load GeoJSON once and keep layer instance; subsequent updates only restyle.
+  useEffect(() => {
+    if (!mapRef.current || geoJsonLayerRef.current) return;
+
+    let cancelled = false;
+
+    const loadGeoJSON = async () => {
       try {
         const response = await fetch('/data/geo/cebu-lgu-boundaries.geojson');
         const cebuData: GeoJSONType = await response.json();
 
-        // If a newer render cycle started while awaiting fetch, skip stale render.
-        if (token !== renderTokenRef.current || !mapRef.current) {
-          return;
-        }
+        if (cancelled || !mapRef.current) return;
 
-        // Remove existing layer if present
-        if (geoJsonLayerRef.current) {
-          mapRef.current!.removeLayer(geoJsonLayerRef.current);
-        }
-
-        // Create GeoJSON layer with proper styling
         const geoJsonLayer = L.geoJSON(cebuData, {
-          style: (feature) => {
-            const name = feature.properties?.name || feature.properties?.NAME || '';
-            const canonicalName = normalizeLocationName(name) || name;
-            const value = data[canonicalName] ?? data[name];
-            const isHighlighted = highlightedLGU === canonicalName;
-            const isDimmed = highlightedLGU && !isHighlighted;
-            const isHiddenByIsolation = Boolean(isolatedLGU && isolatedLGU !== canonicalName);
-            const isDark = tileLayer === 'cartoDark';
-            const color = getColor(value !== undefined ? value : undefined, dataRange.min, dataRange.max, tileLayer);
-            const boundaryColor = isDark ? '#14b8a6' : '#334155';
-            const boundaryWeight = 2.5;
-            const highlightStroke = isDark ? '#a7f3d0' : '#7f1d1d';
-            
-            return {
-              color: isHiddenByIsolation ? 'transparent' : isHighlighted ? highlightStroke : boundaryColor,
-              weight: isHiddenByIsolation ? 0 : isHighlighted ? 4 : boundaryWeight,
-              opacity: isHiddenByIsolation ? 0 : isDimmed ? 0.2 : 1,
-              fillOpacity: isHiddenByIsolation ? 0 : isHighlighted ? 0.8 : isDimmed ? 0.1 : 0.6,
-              fillColor: isHiddenByIsolation ? 'transparent' : color,
-            };
-          },
+          style: styleFeature,
           onEachFeature: (feature, layer) => {
             const properties = feature.properties || {};
             const name = properties.name || properties.NAME || 'Unknown';
             const canonicalName = normalizeLocationName(name) || name;
-            
-            // Add hover interaction
+
             layer.on('mouseover', () => {
               if (layer instanceof L.Path) {
                 layer.setStyle({
                   weight: 3,
                   fillOpacity: 0.8,
-                  color: tileLayer === 'cartoDark' ? '#67e8f9' : '#9a3412',
+                  color: tileLayerValueRef.current === 'cartoDark' ? '#67e8f9' : '#9a3412',
                 });
               }
-              const value = data[canonicalName] ?? data[name] ?? null;
-              onHover(canonicalName, typeof value === 'number' ? value : null);
+
+              const currentData = dataRef.current;
+              const value = currentData[canonicalName] ?? currentData[name] ?? null;
+              onHoverRef.current(canonicalName, typeof value === 'number' ? value : null);
             });
-            
+
             layer.on('mouseout', () => {
               if (layer instanceof L.Path && geoJsonLayerRef.current) {
                 geoJsonLayerRef.current.resetStyle(layer);
               }
-              onHover(null, null);
+              onHoverRef.current(null, null);
             });
           },
         });
 
         geoJsonLayer.addTo(mapRef.current);
         geoJsonLayerRef.current = geoJsonLayer;
-        
-        // Log loaded municipalities for debugging
-        const loadedMunis = new Set<string>();
-        geoJsonLayer.eachLayer((layer) => {
-          const layerAny = layer as { feature?: { properties?: { name?: string } } };
-          if (layerAny.feature?.properties?.name) {
-            loadedMunis.add(layerAny.feature.properties.name);
-          }
-        });
-        console.log(`Loaded ${loadedMunis.size} municipalities:`, Array.from(loadedMunis).sort());
       } catch (error) {
         console.error('Error loading GeoJSON:', error);
       }
     };
 
     loadGeoJSON();
-  }, [data, onHover, highlightedLGU, isolatedLGU, tileLayer, dataRange.min, dataRange.max]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [styleFeature]);
 
   return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
 }

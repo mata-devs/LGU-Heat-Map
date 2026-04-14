@@ -20,6 +20,7 @@ export const SHEET_NAMES = DEFAULT_SHEET_NAMES;
 // ONE-TIME SETUP: Paste your Google Sheet share link here!
 // ============================================================
 export const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Dh4o6fimn6BIkJj7M4HYiWY7msMB6k_6fLo2U6ehAXg/edit?usp=sharing';
+export const DYNAMIC_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 // ============================================================
 // DYNAMIC DATASET HOOK - Auto-discovers + preloads all sheets from your URL
@@ -75,30 +76,60 @@ function loadDatasetBackup(): DatasetBackup | null {
  * @returns error - Any error that occurred
  * @returns refresh - Function to re-discover and reload all sheets
  */
-export function useDynamicDatasets() {
+export function useDynamicDatasets(refreshIntervalMs = DYNAMIC_REFRESH_INTERVAL_MS) {
   const [sheets, setSheets] = useState<DiscoveredSheet[]>([]);
   const [datasetData, setDatasetData] = useState<Record<string, DatasetData>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const datasetDataRef = useRef<Record<string, DatasetData>>({});
+  const sheetsRef = useRef<DiscoveredSheet[]>([]);
+  const requestIdRef = useRef(0);
+  const inFlightRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     datasetDataRef.current = datasetData;
   }, [datasetData]);
 
-  const discover = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    sheetsRef.current = sheets;
+  }, [sheets]);
+
+  const discover = useCallback(async (forceRediscover = true) => {
+    if (inFlightRef.current) return;
+
+    inFlightRef.current = true;
+    const requestId = ++requestIdRef.current;
+
+    if (isMountedRef.current) {
+      setLoading(true);
+      setError(null);
+    }
+
     const sourceUrl = getEffectiveSheetUrl();
     
     try {
-      // Discover sheets
-      const discovered = await getDiscoveredSheets(sourceUrl, SHEET_NAMES);
+      // Discover sheets on first load/manual refresh; interval refresh reuses current sheets.
+      const discovered = !forceRediscover && sheetsRef.current.length > 0
+        ? sheetsRef.current
+        : await getDiscoveredSheets(sourceUrl, SHEET_NAMES);
       if (discovered.length === 0) {
         throw new Error('No valid sheets discovered from configured Google Sheet URL');
       }
 
-      setSheets(discovered);
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      if (forceRediscover || sheetsRef.current.length === 0) {
+        setSheets(discovered);
+      }
 
       // Preload ALL sheets in parallel
       const allData: Record<string, DatasetData> = {};
@@ -132,9 +163,17 @@ export function useDynamicDatasets() {
         throw new Error('No sheet data could be loaded from Google Sheets');
       }
 
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       setDatasetData(allData);
       saveDatasetBackup(discovered, allData, sourceUrl);
     } catch (err) {
+      if (!isMountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       const backup = loadDatasetBackup();
 
       if (backup && Object.keys(backup.datasetData).length > 0 && backup.sheets.length > 0) {
@@ -145,23 +184,32 @@ export function useDynamicDatasets() {
         setError(err instanceof Error ? err.message : 'Failed to discover sheets');
       }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        inFlightRef.current = false;
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+      }
     }
   }, []);
 
   useEffect(() => {
-    discover();
+    discover(true);
   }, [discover]);
 
-  // Auto-refresh every 10 seconds
+  // Auto-refresh without re-discovering sheet tabs each time.
   useEffect(() => {
-    const interval = setInterval(() => {
-      discover();
-    }, 10 * 1000);
-    return () => clearInterval(interval);
-  }, [discover]);
+    if (refreshIntervalMs <= 0) return;
 
-  return { sheets, datasetData, loading, error, refresh: discover };
+    const interval = setInterval(() => {
+      discover(false);
+    }, refreshIntervalMs);
+    return () => clearInterval(interval);
+  }, [discover, refreshIntervalMs]);
+
+  const refresh = useCallback(() => discover(true), [discover]);
+
+  return { sheets, datasetData, loading, error, refresh };
 }
 
 // ============================================================

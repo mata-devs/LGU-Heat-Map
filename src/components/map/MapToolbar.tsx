@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Layers, Clock, PanelLeft, RefreshCw, Map } from "lucide-react";
 
 interface DatasetOption {
@@ -22,6 +23,9 @@ interface MapToolbarProps {
   showRefresh?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  autoRefreshMinutes?: number;
+  autoRefreshOptions?: number[];
+  onAutoRefreshMinutesChange?: (minutes: number) => void;
 }
 
 export function MapToolbar({ 
@@ -38,8 +42,26 @@ export function MapToolbar({
   lastUpdated,
   showRefresh,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  autoRefreshMinutes = 5,
+  autoRefreshOptions = [1, 3, 5],
+  onAutoRefreshMinutesChange,
 }: MapToolbarProps) {
+  const [showRefreshMenu, setShowRefreshMenu] = useState(false);
+  const refreshMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!refreshMenuRef.current) return;
+      if (!refreshMenuRef.current.contains(event.target as Node)) {
+        setShowRefreshMenu(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => window.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
   return (
     <div className="fixed top-4 left-4 right-4 z-[1000] flex items-center gap-3 pointer-events-none">
       {/* Left: toggle + title */}
@@ -102,15 +124,46 @@ export function MapToolbar({
       {/* Right: refresh + last updated */}
       <div className="ml-auto flex items-center gap-2">
         {showRefresh && onRefresh && (
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="glass-panel flex items-center gap-1.5 px-3 py-2 pointer-events-auto hover:bg-secondary/40 transition-colors disabled:opacity-50"
-            title="Refresh data from Google Sheet"
-          >
-            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="text-xs">Refresh</span>
-          </button>
+          <div ref={refreshMenuRef} className="relative pointer-events-auto">
+            <div className="glass-panel flex items-stretch overflow-hidden">
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-2 hover:bg-secondary/40 transition-colors disabled:opacity-50"
+                title="Refresh data from Google Sheet"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="text-xs">Refresh</span>
+              </button>
+              <button
+                onClick={() => setShowRefreshMenu((p) => !p)}
+                className="border-l border-border/60 flex items-center gap-1.5 px-3 py-2 hover:bg-secondary/40 transition-colors"
+                title="Set auto refresh interval"
+              >
+                <span className="text-xs text-muted-foreground">{autoRefreshMinutes} min</span>
+                <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${showRefreshMenu ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {showRefreshMenu && (
+              <div className="absolute top-full right-0 mt-1 min-w-[140px] glass-panel shadow-lg overflow-hidden z-[1001]">
+                {autoRefreshOptions.map((minutes) => (
+                  <button
+                    key={minutes}
+                    onClick={() => {
+                      onAutoRefreshMinutesChange?.(minutes);
+                      setShowRefreshMenu(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs hover:bg-secondary/40 transition-colors ${
+                      minutes === autoRefreshMinutes ? 'bg-primary/10 text-primary font-medium' : 'text-foreground'
+                    }`}
+                  >
+                    Auto refresh: {minutes} min
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         <div className="glass-panel-subtle flex items-center gap-1.5 px-3 py-2 pointer-events-auto">
           <Clock className="w-3 h-3 text-muted-foreground" />
