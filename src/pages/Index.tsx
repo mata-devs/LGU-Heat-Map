@@ -5,6 +5,7 @@ import { LguRankingPanel } from "@/components/map/LguRankingPanel";
 import { LguInfoCard } from "@/components/map/LguInfoCard";
 import { ChoroplethLegend } from "@/components/map/ChoroplethLegend";
 import { SAMPLE_DATA, getDataRange } from "@/data/datasets";
+import { normalizeLocationName } from "@/data/cebu-geo";
 import { useDynamicDatasets } from "@/config/dataset-sheets";
 
 interface DatasetOption {
@@ -49,6 +50,16 @@ const Index = () => {
   const effectiveData = useSheetData_ ? sheetData : SAMPLE_DATA.tourist_arrivals;
   const effectiveRange = useSheetData_ ? { min, max } : getDataRange('tourist_arrivals');
 
+  // Normalize all LGU keys to canonical GeoJSON names so selection/highlighting is consistent.
+  const normalizedData = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [rawName, value] of Object.entries(effectiveData)) {
+      const canonicalName = normalizeLocationName(rawName) || rawName;
+      out[canonicalName] = (out[canonicalName] || 0) + value;
+    }
+    return out;
+  }, [effectiveData]);
+
   // Get active dataset label
   const activeDataset = sheets.find(s => s.id === datasetId) || { 
     id: datasetId || 'unknown', 
@@ -62,7 +73,7 @@ const Index = () => {
   }, []);
 
   const highlightedLGU = selectedLGU;
-  const selectedValue = selectedLGU ? effectiveData[selectedLGU] : undefined;
+  const selectedValue = selectedLGU ? normalizedData[selectedLGU] : undefined;
   const infoCardName = hovered.name ?? selectedLGU;
   const infoCardValue = hovered.name ? hovered.value : typeof selectedValue === "number" ? selectedValue : null;
   const infoCardType = hovered.name ? hovered.type : selectedLGU ? "municipality" : undefined;
@@ -89,7 +100,7 @@ const Index = () => {
       <ChoroplethMap 
         datasetId={datasetId} 
         onHover={handleHover}
-        data={effectiveData}
+        data={normalizedData}
         dataRange={effectiveRange}
         dataSource={useSheetData_ ? 'sheet' : 'fallback'}
         tileLayer={tileLayer}
@@ -116,7 +127,7 @@ const Index = () => {
 
       <LguRankingPanel 
         open={sidePanelOpen} 
-        data={effectiveData}
+        data={normalizedData}
         highlightedLGU={highlightedLGU}
         selectedLGU={selectedLGU}
         onSelectLGU={setSelectedLGU}

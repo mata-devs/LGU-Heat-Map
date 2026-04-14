@@ -25,3 +25,7 @@ dist-ssr
 
 # Large local geospatial artifacts (store outside git or use LFS)
 *.mbtiles
+
+# Local assistant/session docs
+AGENTS.md
+Response.md

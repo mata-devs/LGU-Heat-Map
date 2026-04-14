@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import type { GeoJSON as GeoJSONType, Feature } from "geojson";
+import { normalizeLocationName } from "@/data/cebu-geo";
 
 interface ChoroplethMapProps {
   datasetId: string;
@@ -51,6 +52,7 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
   const mapRef = useRef<L.Map | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const renderTokenRef = useRef(0);
 
   // Initialize map
   useEffect(() => {
@@ -115,14 +117,14 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
   }, [tileLayer]);
 
   // Color scale function - takes value and returns color based on tile layer
-  const getColor = (value: number | undefined, min: number, max: number, isDark: boolean): string => {
-    if (value === undefined || value === 0) return isDark ? '#374151' : '#d1d5db'; // gray for zero/no data
+  const getColor = (value: number | undefined, min: number, max: number, currentTileLayer: 'cartoDark' | 'openStreetMap'): string => {
+    if (value === undefined || value === 0) return currentTileLayer === 'cartoDark' ? '#374151' : '#d1d5db'; // gray for zero/no data
     
     const ratio = (value - min) / (max - min || 1);
     const clampedRatio = Math.max(0, Math.min(1, ratio));
     const stretchedRatio = Math.pow(clampedRatio, 0.78);
     
-    const colors = isDark ? DARK_COLORS : OSM_COLORS;
+    const colors = currentTileLayer === 'cartoDark' ? DARK_COLORS : OSM_COLORS;
     const index = Math.min(Math.floor(stretchedRatio * colors.length), colors.length - 1);
     return colors[index];
   };
@@ -130,6 +132,8 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
   // Load and render GeoJSON layer
   useEffect(() => {
     const loadGeoJSON = async () => {
+      const token = ++renderTokenRef.current;
+
       // Guard against null map during hot reload
       if (!mapRef.current) {
         console.warn('GeoJSON: map not ready, skipping load');
@@ -140,6 +144,11 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
         const response = await fetch('/data/geo/cebu-lgu-boundaries.geojson');
         const cebuData: GeoJSONType = await response.json();
 
+        // If a newer render cycle started while awaiting fetch, skip stale render.
+        if (token !== renderTokenRef.current || !mapRef.current) {
+          return;
+        }
+
         // Remove existing layer if present
         if (geoJsonLayerRef.current) {
           mapRef.current!.removeLayer(geoJsonLayerRef.current);
@@ -149,12 +158,13 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
         const geoJsonLayer = L.geoJSON(cebuData, {
           style: (feature) => {
             const name = feature.properties?.name || feature.properties?.NAME || '';
-            const value = data[name];
-            const isHighlighted = highlightedLGU === name;
+            const canonicalName = normalizeLocationName(name) || name;
+            const value = data[canonicalName] ?? data[name];
+            const isHighlighted = highlightedLGU === canonicalName;
             const isDimmed = highlightedLGU && !isHighlighted;
-            const isHiddenByIsolation = Boolean(isolatedLGU && isolatedLGU !== name);
+            const isHiddenByIsolation = Boolean(isolatedLGU && isolatedLGU !== canonicalName);
             const isDark = tileLayer === 'cartoDark';
-            const color = getColor(value !== undefined ? value : undefined, dataRange.min, dataRange.max, isDark);
+            const color = getColor(value !== undefined ? value : undefined, dataRange.min, dataRange.max, tileLayer);
             const boundaryColor = isDark ? '#14b8a6' : '#334155';
             const boundaryWeight = 2.5;
             const highlightStroke = isDark ? '#a7f3d0' : '#7f1d1d';
@@ -170,6 +180,7 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
           onEachFeature: (feature, layer) => {
             const properties = feature.properties || {};
             const name = properties.name || properties.NAME || 'Unknown';
+            const canonicalName = normalizeLocationName(name) || name;
             
             // Add hover interaction
             layer.on('mouseover', () => {
@@ -180,8 +191,8 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
                   color: tileLayer === 'cartoDark' ? '#67e8f9' : '#9a3412',
                 });
               }
-              const value = data[name] || null;
-              onHover(name, typeof value === 'number' ? value : null);
+              const value = data[canonicalName] ?? data[name] ?? null;
+              onHover(canonicalName, typeof value === 'number' ? value : null);
             });
             
             layer.on('mouseout', () => {
