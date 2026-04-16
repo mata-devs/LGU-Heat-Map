@@ -8,15 +8,17 @@ This project creates an interactive choropleth map of Cebu Island that visualize
 
 ## Features
 
-- **Dual-map Architecture**: 
-  - Leaflet-based production choropleth map for clean, fast visualization
-  - Kepler.gl environment for advanced geoanalysis and exploration
-  
-- **Data Integration**:
+- **Production Choropleth Map**:
+  - Leaflet-based Cebu LGU map optimized for dashboard and embed use
+  - Hover-driven LGU highlighting with name and value display
+  - Click-to-select workflow with ranking panel integration
+
+- **Google Sheets Data Pipeline**:
   - Automatically reads from a Google Sheet (no code changes needed after setup)
-  - Municipalities shaded on a color gradient based on sheet values
-  - Hovering over areas shows name and current value
-  
+  - Dynamic dataset discovery and switching
+  - Municipalities shaded on a dynamic color gradient based on live values
+  - Auto-refresh with manual refresh support
+
 - **Multiple Use Cases**:
   - Tourist arrivals visualization
   - Motorist volume tracking for fuel allocation
@@ -27,8 +29,7 @@ This project creates an interactive choropleth map of Cebu Island that visualize
 ## Technical Stack
 
 - React + TypeScript with Vite build system
-- Leaflet for production choropleth rendering
-- Kepler.gl for advanced geoanalysis
+- Leaflet for choropleth rendering
 - shadcn/ui components with TailwindCSS styling
 - Google Sheets API for data sourcing
 - GeoJSON boundaries from faeldon/philippines-json-maps
@@ -47,7 +48,7 @@ src/
 ├── components/     # React components
 │   ├── ui/         # shadcn/ui primitives
 │   └── map/        # Map-specific components
-├── pages/          # Page components
+├── pages/          # Main map page and route-level components
 ├── hooks/          # Custom React hooks
 ├── lib/            # Utility functions
 └── data/           # Data transformation functions
@@ -74,5 +75,3 @@ public/
 - CPTO displays
 - Interactive kiosks
 - Other internal platforms
-
-For detailed development guidelines, see [AGENTS.md](AGENTS.md).
