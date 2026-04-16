@@ -73,7 +73,7 @@ export function MapToolbar({
         >
           <PanelLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold text-foreground">Cebu Insights</span>
+        <span className="text-sm font-semibold text-foreground">Cebu LGU Heat Map</span>
       </div>
 
       {/* Dataset dropdown */}

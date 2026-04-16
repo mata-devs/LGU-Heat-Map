@@ -52,12 +52,26 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
   const mapRef = useRef<L.Map | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const hoverClearTimeoutRef = useRef<number | null>(null);
+  const activeHoveredLGURef = useRef<string | null>(null);
   const dataRef = useRef(data);
   const rangeRef = useRef(dataRange);
   const highlightedLGURef = useRef(highlightedLGU);
   const isolatedLGURef = useRef(isolatedLGU);
   const tileLayerValueRef = useRef(tileLayer);
   const onHoverRef = useRef(onHover);
+
+  const clearPendingHover = useCallback(() => {
+    if (hoverClearTimeoutRef.current !== null) {
+      window.clearTimeout(hoverClearTimeoutRef.current);
+      hoverClearTimeoutRef.current = null;
+    }
+  }, []);
+
+  const commitHover = useCallback((name: string | null, value: number | null) => {
+    activeHoveredLGURef.current = name;
+    onHoverRef.current(name, value);
+  }, []);
 
   // Initialize map
   useEffect(() => {
@@ -95,11 +109,13 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
     window.addEventListener('resize', handleResize);
 
     return () => {
+      clearPendingHover();
+      activeHoveredLGURef.current = null;
       window.removeEventListener('resize', handleResize);
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [clearPendingHover]);
 
   // Switch tile layer when tileLayer prop changes
   useEffect(() => {
@@ -162,19 +178,23 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
     };
   }, []);
 
-  // Keep latest props in refs so style/handlers can update without recreating the layer.
+  // Keep onHover callback fresh without triggering full layer restyle.
+  useEffect(() => {
+    onHoverRef.current = onHover;
+  }, [onHover]);
+
+  // Keep latest style-driving props in refs so layer can restyle correctly.
   useEffect(() => {
     dataRef.current = data;
     rangeRef.current = dataRange;
     highlightedLGURef.current = highlightedLGU;
     isolatedLGURef.current = isolatedLGU;
     tileLayerValueRef.current = tileLayer;
-    onHoverRef.current = onHover;
 
     if (geoJsonLayerRef.current) {
       geoJsonLayerRef.current.setStyle(styleFeature);
     }
-  }, [data, dataRange, highlightedLGU, isolatedLGU, onHover, tileLayer, styleFeature]);
+  }, [data, dataRange, highlightedLGU, isolatedLGU, tileLayer, styleFeature]);
 
   // Load GeoJSON once and keep layer instance; subsequent updates only restyle.
   useEffect(() => {
@@ -197,24 +217,46 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
             const canonicalName = normalizeLocationName(name) || name;
 
             layer.on('mouseover', () => {
+              clearPendingHover();
+
               if (layer instanceof L.Path) {
                 layer.setStyle({
                   weight: 3,
                   fillOpacity: 0.8,
                   color: tileLayerValueRef.current === 'cartoDark' ? '#67e8f9' : '#9a3412',
                 });
+                layer.bringToFront();
               }
 
               const currentData = dataRef.current;
               const value = currentData[canonicalName] ?? currentData[name] ?? null;
-              onHoverRef.current(canonicalName, typeof value === 'number' ? value : null);
+              commitHover(canonicalName, typeof value === 'number' ? value : null);
             });
 
-            layer.on('mouseout', () => {
+            layer.on('mouseout', (event: L.LeafletMouseEvent) => {
               if (layer instanceof L.Path && geoJsonLayerRef.current) {
                 geoJsonLayerRef.current.resetStyle(layer);
               }
-              onHoverRef.current(null, null);
+
+              // Crossing borders between LGUs fires mouseout; ignore it when entering
+              // another interactive polygon to prevent card blink.
+              const relatedTarget = (event.originalEvent as MouseEvent | undefined)?.relatedTarget as Element | null;
+              const enteredAnotherFeature = Boolean(relatedTarget?.closest?.('.leaflet-interactive'));
+              if (enteredAnotherFeature) {
+                clearPendingHover();
+                return;
+              }
+
+              hoverClearTimeoutRef.current = window.setTimeout(() => {
+                // Ignore stale clear if pointer already entered another LGU.
+                if (activeHoveredLGURef.current !== canonicalName) {
+                  hoverClearTimeoutRef.current = null;
+                  return;
+                }
+
+                commitHover(null, null);
+                hoverClearTimeoutRef.current = null;
+              }, 90);
             });
           },
         });
@@ -230,8 +272,10 @@ export function ChoroplethMap({ datasetId, onHover, data, dataRange, dataSource,
 
     return () => {
       cancelled = true;
+      clearPendingHover();
+      activeHoveredLGURef.current = null;
     };
-  }, [styleFeature]);
+  }, [clearPendingHover, commitHover, styleFeature]);
 
   return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
 }

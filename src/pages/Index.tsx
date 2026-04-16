@@ -55,7 +55,7 @@ const Index = () => {
   
   // Google Sheets is the only source of LGU values.
   const effectiveData = sheetData;
-  const effectiveRange = { min, max };
+  const effectiveRange = useMemo(() => ({ min, max }), [min, max]);
 
   // Normalize all LGU keys to canonical GeoJSON names so selection/highlighting is consistent.
   const normalizedData = useMemo(() => {
