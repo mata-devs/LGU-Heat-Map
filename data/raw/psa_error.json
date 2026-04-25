@@ -1,0 +1,10 @@
+{
+  "dataset": "psa",
+  "errors": [
+    "PSA scraper not implemented \u2014 site returns 403/Cloudflare.",
+    "Use 2020 Census Excel download instead (NOT blocked): psa.gov.ph/content/2020-census-population-and-housing-2020-cph",
+    "See docstring for implementation options."
+  ],
+  "timestamp": "2026-04-22T14:50:28.111421+00:00",
+  "source": "psa.gov.ph blocked"
+}

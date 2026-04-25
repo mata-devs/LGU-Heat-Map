@@ -1,0 +1,16 @@
+{
+  "dataset": "doe",
+  "errors": [
+    "Could not fetch: https://www.doe.gov.ph/sites/default/files/pdf/petroleum/fuel_monitoring_report_latest.pdf",
+    "Could not fetch: https://www.doe.gov.ph/sites/default/files/pdf/petroleum/2024/fuel_monitoring_report.pdf",
+    "Could not fetch: https://www.doe.gov.ph/sites/default/files/pdf/energy_statistics/2024/ces_2024.pdf",
+    "Could not fetch: https://www.doe.gov.ph/sites/default/files/pdf/petroleum/region7_fuel_allocation.pdf"
+  ],
+  "timestamp": "2026-04-22T15:45:10.434858+00:00",
+  "urls_attempted": [
+    "https://www.doe.gov.ph/sites/default/files/pdf/petroleum/fuel_monitoring_report_latest.pdf",
+    "https://www.doe.gov.ph/sites/default/files/pdf/petroleum/2024/fuel_monitoring_report.pdf",
+    "https://www.doe.gov.ph/sites/default/files/pdf/energy_statistics/2024/ces_2024.pdf",
+    "https://www.doe.gov.ph/sites/default/files/pdf/petroleum/region7_fuel_allocation.pdf"
+  ]
+}

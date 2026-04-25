@@ -1,0 +1,32 @@
+# Cebu LGU Data Pipeline — Python Dependencies
+#
+# Install all:
+#   pip install -r requirements.txt
+#
+# Minimum (boundaries + pipeline only, no PDF scraping):
+#   pip install aiohttp
+#
+# Full install (PDF scraping + Cloudflare bypass):
+#   pip install -r requirements.txt
+
+# ── Core (required) ───────────────────────────────────────────────────────────
+aiohttp>=3.9.0              # async HTTP client
+
+# ── PDF parsing (for DOE + DOT scraper) ──────────────────────────────────────
+pdfplumber>=0.10.0          # table extraction from PDFs (preferred)
+pymupdf>=1.23.0             # PyMuPDF fallback for text extraction
+
+# ── HTML parsing (for DOT HTML table scraping) ───────────────────────────────
+beautifulsoup4>=4.12.0      # HTML table parsing
+lxml>=5.0.0                 # fast HTML parser backend for bs4
+
+# ── Cloudflare bypass ────────────────────────────────────────────────────────
+cloudscraper>=1.2.71        # basic Cloudflare JS challenge bypass
+
+# ── Playwright (optional — for full browser-based scraping) ──────────────────
+# playwright>=1.40.0        # uncomment if implementing Playwright scrapers
+#                           # after install: playwright install chromium
+
+# ── Data output ──────────────────────────────────────────────────────────────
+# csv and json are stdlib — no install needed
+# openpyxl>=3.1.0           # uncomment if parsing Excel files (PSA census)

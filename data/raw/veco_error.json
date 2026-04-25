@@ -1,0 +1,9 @@
+{
+  "dataset": "veco",
+  "errors": [
+    "VECO scraper not implemented \u2014 private company, no public API.",
+    "Contact customercare@veco.com.ph for data partnership."
+  ],
+  "timestamp": "2026-04-22T14:50:28.111559+00:00",
+  "source": "veco.com.ph unreachable"
+}

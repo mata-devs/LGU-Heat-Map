@@ -1,0 +1,9 @@
+{
+  "dataset": "dpwh",
+  "errors": [
+    "DPWH scraper not implemented \u2014 site blocked by Cloudflare + Imperva.",
+    "See docstring for implementation options: Playwright, direct contact, or FOI request."
+  ],
+  "timestamp": "2026-04-22T14:50:28.111038+00:00",
+  "source": "dpwh.gov.ph blocked"
+}

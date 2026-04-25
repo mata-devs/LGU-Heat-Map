@@ -1,0 +1,9 @@
+{
+  "dataset": "comelec",
+  "errors": [
+    "COMELEC scraper not implemented \u2014 site unreachable from non-PH IPs.",
+    "See docstring for FOI and Excel download options."
+  ],
+  "timestamp": "2026-04-22T14:50:28.111275+00:00",
+  "source": "comelec.gov.ph unreachable"
+}
